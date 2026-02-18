@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Calendar, Check, Loader2 } from "lucide-react";
 import { formatMinutes } from "@/lib/utils";
+import { UserSettingsUpdate } from "@/lib/types";
 import { toast } from "sonner";
 
 interface SettingsPanelProps {
@@ -15,7 +16,7 @@ interface SettingsPanelProps {
   workingHoursEnd: string;
   dailyBudget: number;
   calendarConnected: boolean;
-  onUpdate: (updates: Record<string, any>) => Promise<void>;
+  onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
 }
 
@@ -28,8 +29,12 @@ export function SettingsPanel({
   onSetupCalendar,
 }: SettingsPanelProps) {
   const [settingUp, setSettingUp] = useState(false);
+  const [localStart, setLocalStart] = useState(workingHoursStart);
+  const [localEnd, setLocalEnd] = useState(workingHoursEnd);
+  const [localBudget, setLocalBudget] = useState(String(dailyBudget));
 
-  async function handleTimeChange(field: string, value: string) {
+  async function commitTime(field: "working_hours_start" | "working_hours_end", value: string) {
+    if (!value) return;
     try {
       await onUpdate({ [field]: value });
     } catch {
@@ -37,9 +42,12 @@ export function SettingsPanel({
     }
   }
 
-  async function handleBudgetChange(value: string) {
-    const minutes = parseInt(value, 10);
-    if (isNaN(minutes) || minutes < 30 || minutes > 480) return;
+  async function commitBudget() {
+    const minutes = parseInt(localBudget, 10);
+    if (isNaN(minutes) || minutes < 30 || minutes > 480) {
+      setLocalBudget(String(dailyBudget));
+      return;
+    }
     try {
       await onUpdate({ daily_minutes_budget: minutes });
     } catch {
@@ -69,33 +77,28 @@ export function SettingsPanel({
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Working hours start */}
           <div className="space-y-2">
             <Label htmlFor="work-start">Work starts</Label>
             <Input
               id="work-start"
               type="time"
-              value={workingHoursStart}
-              onChange={(e) =>
-                handleTimeChange("working_hours_start", e.target.value)
-              }
+              value={localStart}
+              onChange={(e) => setLocalStart(e.target.value)}
+              onBlur={() => commitTime("working_hours_start", localStart)}
             />
           </div>
 
-          {/* Working hours end */}
           <div className="space-y-2">
             <Label htmlFor="work-end">Work ends</Label>
             <Input
               id="work-end"
               type="time"
-              value={workingHoursEnd}
-              onChange={(e) =>
-                handleTimeChange("working_hours_end", e.target.value)
-              }
+              value={localEnd}
+              onChange={(e) => setLocalEnd(e.target.value)}
+              onBlur={() => commitTime("working_hours_end", localEnd)}
             />
           </div>
 
-          {/* Daily task budget */}
           <div className="space-y-2">
             <Label htmlFor="budget">
               Daily budget{" "}
@@ -109,12 +112,12 @@ export function SettingsPanel({
               min={30}
               max={480}
               step={15}
-              value={dailyBudget}
-              onChange={(e) => handleBudgetChange(e.target.value)}
+              value={localBudget}
+              onChange={(e) => setLocalBudget(e.target.value)}
+              onBlur={commitBudget}
             />
           </div>
 
-          {/* Google Calendar connection */}
           <div className="space-y-2">
             <Label>Google Calendar</Label>
             {calendarConnected ? (

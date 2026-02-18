@@ -33,8 +33,6 @@ function minutesToISO(date: string, totalMinutes: number): string {
   const mins = totalMinutes % 60;
   const h = hours.toString().padStart(2, "0");
   const m = mins.toString().padStart(2, "0");
-  // Build a local datetime string. The API expects ISO format with timezone.
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const dt = new Date(`${date}T${h}:${m}:00`);
   return dt.toISOString();
 }
@@ -56,11 +54,16 @@ function getFreeSlots(
     const eventEnd = parseISO(event.end);
 
     const startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
-    const endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+    let endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+
+    // Handle midnight-crossing events: clamp to end of working hours
+    if (endMin <= startMin) {
+      endMin = workEndMin;
+    }
 
     busy.push({
       start: Math.max(startMin, workStartMin),
-      end: Math.min(endMin > startMin ? endMin : startMin + 30, workEndMin),
+      end: Math.min(endMin, workEndMin),
     });
   }
 

@@ -23,24 +23,29 @@ function timeToMinutes(time: string): number {
 
 function eventToTimeRange(
   event: CalendarEvent,
-  date: string
+  date: string,
+  workEndMin: number
 ): { startMin: number; endMin: number } | null {
   if (event.allDay) return null;
+  if (!event.start.startsWith(date)) return null;
 
   const eventStart = parseISO(event.start);
   const eventEnd = parseISO(event.end);
 
-  // Only include events that start on this date
-  if (!event.start.startsWith(date)) return null;
-
   const startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
-  const endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+  let endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
 
-  return { startMin, endMin: endMin > startMin ? endMin : startMin + 30 };
+  // Handle midnight-crossing events: clamp to end of working hours
+  if (endMin <= startMin) {
+    endMin = workEndMin;
+  }
+
+  return { startMin, endMin };
 }
 
 interface TimeBlock {
   type: "event" | "task";
+  id: string;
   label: string;
   startMin: number;
   endMin: number;
@@ -56,7 +61,6 @@ export function DayTimeline({
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
-  const totalWorkMinutes = workEndMin - workStartMin;
 
   const hours = useMemo(() => {
     const startHour = Math.floor(workStartMin / 60);
@@ -71,12 +75,12 @@ export function DayTimeline({
   const { blocks, unscheduledTasks } = useMemo(() => {
     const blocks: TimeBlock[] = [];
 
-    // Calendar events
     for (const event of events) {
-      const range = eventToTimeRange(event, date);
+      const range = eventToTimeRange(event, date, workEndMin);
       if (!range) continue;
       blocks.push({
         type: "event",
+        id: event.id,
         label: event.summary,
         startMin: range.startMin,
         endMin: range.endMin,
@@ -84,13 +88,6 @@ export function DayTimeline({
       });
     }
 
-    // Tasks that have been scheduled (have google_event_id)
-    const scheduledTasks = tasks.filter(
-      (t) => t.google_event_id && t.status === "planned"
-    );
-    // We don't add scheduled tasks as separate blocks since they show up as events already
-
-    // Unscheduled planned tasks
     const unscheduledTasks = tasks.filter(
       (t) =>
         t.status === "planned" &&
@@ -98,8 +95,8 @@ export function DayTimeline({
         t.estimated_minutes
     );
 
-    return { blocks, unscheduledTasks, scheduledTasks };
-  }, [events, tasks, date]);
+    return { blocks, unscheduledTasks };
+  }, [events, tasks, date, workEndMin]);
 
   const hasContent = blocks.length > 0 || unscheduledTasks.length > 0;
 
@@ -116,7 +113,6 @@ export function DayTimeline({
 
   return (
     <div className="space-y-4">
-      {/* Timeline */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -126,61 +122,50 @@ export function DayTimeline({
         </CardHeader>
         <CardContent>
           <div className="relative">
-            {hours.map((hour) => {
-              const hourMin = hour * 60;
-              const topPercent =
-                ((hourMin - workStartMin) / totalWorkMinutes) * 100;
-
-              return (
-                <div
-                  key={hour}
-                  className="flex items-start border-t border-border/50"
-                  style={{ minHeight: "3rem" }}
-                >
-                  <span className="w-16 shrink-0 pr-3 pt-1 text-right text-xs text-muted-foreground">
-                    {format(new Date(2000, 0, 1, hour), "h a")}
-                  </span>
-                  <div className="relative flex-1 min-h-12">
-                    {/* Render blocks that start in this hour */}
-                    {blocks
-                      .filter(
-                        (b) =>
-                          Math.floor(b.startMin / 60) === hour
-                      )
-                      .map((block, idx) => {
-                        const heightRatio = Math.min(
-                          block.durationMinutes / 60,
-                          4
-                        );
-                        return (
-                          <div
-                            key={idx}
-                            className={cn(
-                              "mb-1 rounded-md px-3 py-1.5 text-xs",
-                              block.type === "event"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
-                                : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
-                            )}
-                            style={{
-                              minHeight: `${Math.max(heightRatio * 3, 1.75)}rem`,
-                            }}
-                          >
-                            <div className="font-medium">{block.label}</div>
-                            <div className="opacity-70">
-                              {formatMinutes(block.durationMinutes)}
-                            </div>
+            {hours.map((hour) => (
+              <div
+                key={hour}
+                className="flex items-start border-t border-border/50"
+                style={{ minHeight: "3rem" }}
+              >
+                <span className="w-16 shrink-0 pr-3 pt-1 text-right text-xs text-muted-foreground">
+                  {format(new Date(2000, 0, 1, hour), "h a")}
+                </span>
+                <div className="relative flex-1 min-h-12">
+                  {blocks
+                    .filter((b) => Math.floor(b.startMin / 60) === hour)
+                    .map((block) => {
+                      const heightRatio = Math.min(
+                        block.durationMinutes / 60,
+                        4
+                      );
+                      return (
+                        <div
+                          key={block.id}
+                          className={cn(
+                            "mb-1 rounded-md px-3 py-1.5 text-xs",
+                            block.type === "event"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
+                              : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                          )}
+                          style={{
+                            minHeight: `${Math.max(heightRatio * 3, 1.75)}rem`,
+                          }}
+                        >
+                          <div className="font-medium">{block.label}</div>
+                          <div className="opacity-70">
+                            {formatMinutes(block.durationMinutes)}
                           </div>
-                        );
-                      })}
-                  </div>
+                        </div>
+                      );
+                    })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Unscheduled tasks */}
       {unscheduledTasks.length > 0 && (
         <Card>
           <CardHeader>
@@ -201,7 +186,7 @@ export function DayTimeline({
                 >
                   <span>{task.name}</span>
                   <Badge variant="outline">
-                    {formatMinutes(task.estimated_minutes!)}
+                    {formatMinutes(task.estimated_minutes ?? 0)}
                   </Badge>
                 </div>
               ))}
