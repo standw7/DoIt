@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Project, ProjectWithProgress, ProjectInsert, Task } from "@/lib/types";
 import { calculateProgress } from "@/lib/utils";
@@ -8,7 +8,8 @@ import { calculateProgress } from "@/lib/utils";
 export function useProjects() {
   const [projects, setProjects] = useState<ProjectWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const fetchProjects = useCallback(async () => {
     const { data: projectData } = await supabase
@@ -63,16 +64,19 @@ export function useProjects() {
       user_id: user.id,
     });
     if (error) throw error;
+    await fetchProjects();
   }
 
   async function updateProject(id: string, updates: Partial<ProjectInsert>) {
     const { error } = await supabase.from("projects").update(updates).eq("id", id);
     if (error) throw error;
+    await fetchProjects();
   }
 
   async function deleteProject(id: string) {
     const { error } = await supabase.from("projects").delete().eq("id", id);
     if (error) throw error;
+    await fetchProjects();
   }
 
   return { projects, loading, createProject, updateProject, deleteProject };

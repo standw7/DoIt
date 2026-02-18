@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskInsert, TaskUpdate } from "@/lib/types";
 
@@ -12,7 +12,8 @@ interface UseTasksOptions {
 export function useTasks(options: UseTasksOptions = {}) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const fetchTasks = useCallback(async () => {
     let query = supabase.from("tasks").select("*");
@@ -51,16 +52,19 @@ export function useTasks(options: UseTasksOptions = {}) {
       user_id: user.id,
     });
     if (error) throw error;
+    await fetchTasks();
   }
 
   async function updateTask(id: string, updates: TaskUpdate) {
     const { error } = await supabase.from("tasks").update(updates).eq("id", id);
     if (error) throw error;
+    await fetchTasks();
   }
 
   async function deleteTask(id: string) {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw error;
+    await fetchTasks();
   }
 
   async function toggleDone(task: Task) {
