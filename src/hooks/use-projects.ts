@@ -16,7 +16,10 @@ export function useProjects() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!projectData) return;
+    if (!projectData) {
+      setLoading(false);
+      return;
+    }
 
     const { data: taskData } = await supabase
       .from("tasks")
