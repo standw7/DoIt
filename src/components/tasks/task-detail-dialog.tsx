@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Task, TaskPriority } from "@/lib/types";
-import { toast } from "sonner";
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -36,21 +35,16 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete 
   }, [task]);
 
   function handleSave() {
-    try {
-      onUpdate(task.id, {
-        name: name.trim(),
-        description: description.trim() || null,
-        priority,
-        estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes) : null,
-        due_date: dueDate || null,
-        day: day || null,
-        status: day && task.status === "backlog" ? "planned" : task.status,
-      });
-      onOpenChange(false);
-      toast.success("Task updated");
-    } catch {
-      toast.error("Failed to update task");
-    }
+    onUpdate(task.id, {
+      name: name.trim(),
+      description: description.trim() || null,
+      priority,
+      estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes) : null,
+      due_date: dueDate || null,
+      day: day || null,
+      status: day && task.status === "backlog" ? "planned" : task.status,
+    });
+    onOpenChange(false);
   }
 
   return (
