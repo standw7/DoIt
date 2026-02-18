@@ -7,9 +7,9 @@ import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { DateSelector } from "@/components/daily/date-selector";
 import { DayTimeline } from "@/components/schedule/day-timeline";
 import { ScheduleButton } from "@/components/schedule/schedule-button";
+import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
-import { getDayCapacity } from "@/lib/scheduler";
-import { pickBestDay } from "@/lib/scheduler";
+import { getDayCapacity, pickBestDay } from "@/lib/scheduler";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wand2 } from "lucide-react";
@@ -36,7 +36,6 @@ export default function SchedulePage() {
     selectedDate
   );
 
-  // Fetch all tasks for auto-assign (need full picture for scheduler)
   const fetchAllTasks = useCallback(async () => {
     const { data } = await supabase.from("tasks").select("*").order("created_at");
     setAllTasks((data ?? []) as Task[]);
@@ -56,9 +55,19 @@ export default function SchedulePage() {
     settings.working_hours_end
   );
 
-  // Tasks that have no day assigned
+  const today = todayString();
+
+  // Tasks with no day assigned
   const unassignedTasks = allTasks.filter(
     (t) => !t.day && t.status !== "done" && t.status !== "skipped"
+  );
+
+  // Overdue tasks: planned for a past day, not done/skipped
+  const overdueTasks = allTasks.filter(
+    (t) =>
+      t.day &&
+      t.day < today &&
+      t.status === "planned"
   );
 
   async function handleAutoAssignAll() {
@@ -66,7 +75,6 @@ export default function SchedulePage() {
     setAssigning(true);
 
     let assigned = 0;
-    // Work through tasks one at a time, updating the list as we go
     let currentTasks = [...allTasks];
 
     for (const task of unassignedTasks) {
@@ -91,13 +99,12 @@ export default function SchedulePage() {
           estimated_minutes: estimatedMinutes,
           auto_assigned: true,
         });
-        // Update local copy so next iteration sees this task as assigned
         currentTasks = currentTasks.map((t) =>
           t.id === task.id ? { ...t, day: bestDay, status: "planned" as const, estimated_minutes: estimatedMinutes } : t
         );
         assigned++;
       } catch {
-        // continue with next task
+        // continue
       }
     }
 
@@ -111,8 +118,26 @@ export default function SchedulePage() {
     await refetchEvents();
   }
 
+  async function handleOverdueUpdate(id: string, updates: Record<string, any>) {
+    await updateTask(id, updates);
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 pb-24">
+      {/* Overdue tasks review — always at top */}
+      {overdueTasks.length > 0 && (
+        <OverdueReview
+          overdueTasks={overdueTasks}
+          allTasks={allTasks}
+          calendarEvents={events}
+          workingHoursStart={settings.working_hours_start}
+          workingHoursEnd={settings.working_hours_end}
+          dailyBudget={settings.daily_minutes_budget}
+          onUpdateTask={handleOverdueUpdate}
+          onRefresh={fetchAllTasks}
+        />
+      )}
+
       {/* Date selector + capacity summary */}
       <div className="flex flex-col items-center gap-3">
         <DateSelector date={selectedDate} onChange={setSelectedDate} />

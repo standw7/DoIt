@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarEvent, Task } from "@/lib/types";
-import { formatMinutes } from "@/lib/utils";
+import { formatMinutes, todayString } from "@/lib/utils";
 import { CalendarPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO } from "date-fns";
@@ -28,6 +28,15 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+function currentTimeMinutes(): number {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function roundUpTo15(minutes: number): number {
+  return Math.ceil(minutes / 15) * 15;
+}
+
 function minutesToISO(date: string, totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
@@ -43,7 +52,15 @@ function getFreeSlots(
   workStartMin: number,
   workEndMin: number
 ): FreeSlot[] {
-  // Collect busy intervals in minutes-of-day
+  // If scheduling for today, start from current time (rounded up to next 15 min)
+  const isToday = date === todayString();
+  const effectiveStart = isToday
+    ? Math.max(workStartMin, roundUpTo15(currentTimeMinutes()))
+    : workStartMin;
+
+  // If current time is past work end, no slots available
+  if (effectiveStart >= workEndMin) return [];
+
   const busy: { start: number; end: number }[] = [];
 
   for (const event of events) {
@@ -56,23 +73,21 @@ function getFreeSlots(
     const startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
     let endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
 
-    // Handle midnight-crossing events: clamp to end of working hours
     if (endMin <= startMin) {
       endMin = workEndMin;
     }
 
     busy.push({
-      start: Math.max(startMin, workStartMin),
+      start: Math.max(startMin, effectiveStart),
       end: Math.min(endMin, workEndMin),
     });
   }
 
-  // Sort by start time
   busy.sort((a, b) => a.start - b.start);
 
-  // Merge overlapping intervals
   const merged: { start: number; end: number }[] = [];
   for (const interval of busy) {
+    if (interval.start >= interval.end) continue;
     if (merged.length > 0 && interval.start <= merged[merged.length - 1].end) {
       merged[merged.length - 1].end = Math.max(
         merged[merged.length - 1].end,
@@ -83,33 +98,23 @@ function getFreeSlots(
     }
   }
 
-  // Find gaps
   const slots: FreeSlot[] = [];
-  let cursor = workStartMin;
+  let cursor = effectiveStart;
 
   for (const interval of merged) {
     if (cursor < interval.start) {
       const duration = interval.start - cursor;
       if (duration >= 15) {
-        slots.push({
-          startMin: cursor,
-          endMin: interval.start,
-          durationMin: duration,
-        });
+        slots.push({ startMin: cursor, endMin: interval.start, durationMin: duration });
       }
     }
     cursor = Math.max(cursor, interval.end);
   }
 
-  // Final gap after last event
   if (cursor < workEndMin) {
     const duration = workEndMin - cursor;
     if (duration >= 15) {
-      slots.push({
-        startMin: cursor,
-        endMin: workEndMin,
-        durationMin: duration,
-      });
+      slots.push({ startMin: cursor, endMin: workEndMin, durationMin: duration });
     }
   }
 
@@ -126,7 +131,6 @@ export function ScheduleButton({
 }: ScheduleButtonProps) {
   const [scheduling, setScheduling] = useState(false);
 
-  // Find unscheduled planned tasks with time estimates
   const unscheduledTasks = tasks.filter(
     (t) =>
       t.status === "planned" &&
@@ -134,7 +138,15 @@ export function ScheduleButton({
       t.estimated_minutes
   );
 
+  // Check if this is a past date
+  const isPast = date < todayString();
+  // Check if today but past work hours
+  const isToday = date === todayString();
+  const workEndMin = timeToMinutes(workEnd);
+  const pastWorkHours = isToday && currentTimeMinutes() >= workEndMin;
+
   if (unscheduledTasks.length === 0) return null;
+  if (isPast || pastWorkHours) return null;
 
   const totalMinutes = unscheduledTasks.reduce(
     (sum, t) => sum + (t.estimated_minutes ?? 0),
@@ -148,13 +160,9 @@ export function ScheduleButton({
       const workStartMin = timeToMinutes(workStart);
       const workEndMin = timeToMinutes(workEnd);
 
-      // Get free slots from existing events
       const freeSlots = getFreeSlots(events, date, workStartMin, workEndMin);
-
-      // Sort slots: longest first
       freeSlots.sort((a, b) => b.durationMin - a.durationMin);
 
-      // Sort tasks: longest first
       const sortedTasks = [...unscheduledTasks].sort(
         (a, b) => (b.estimated_minutes ?? 0) - (a.estimated_minutes ?? 0)
       );
@@ -162,7 +170,6 @@ export function ScheduleButton({
       let scheduled = 0;
       let skipped = 0;
 
-      // Track remaining capacity in each slot
       const slotRemaining = freeSlots.map((s) => ({
         ...s,
         cursor: s.startMin,
@@ -172,7 +179,6 @@ export function ScheduleButton({
         const duration = task.estimated_minutes ?? 0;
         if (duration <= 0) continue;
 
-        // Find first slot with enough remaining space
         const slotIndex = slotRemaining.findIndex(
           (s) => s.endMin - s.cursor >= duration
         );
