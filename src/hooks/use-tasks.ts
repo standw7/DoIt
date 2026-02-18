@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Task, TaskInsert, TaskUpdate } from "@/lib/types";
+import { toast } from "sonner";
 
 interface UseTasksOptions {
   projectId?: string;
@@ -56,15 +57,27 @@ export function useTasks(options: UseTasksOptions = {}) {
   }
 
   async function updateTask(id: string, updates: TaskUpdate) {
-    const { error } = await supabase.from("tasks").update(updates).eq("id", id);
-    if (error) throw error;
-    await fetchTasks();
+    const prev = tasks;
+    setTasks((t) => t.map((task) => task.id === id ? { ...task, ...updates } : task));
+    try {
+      const { error } = await supabase.from("tasks").update(updates).eq("id", id);
+      if (error) throw error;
+    } catch {
+      setTasks(prev);
+      toast.error("Failed to update task");
+    }
   }
 
   async function deleteTask(id: string) {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) throw error;
-    await fetchTasks();
+    const prev = tasks;
+    setTasks((t) => t.filter((task) => task.id !== id));
+    try {
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      if (error) throw error;
+    } catch {
+      setTasks(prev);
+      toast.error("Failed to delete task");
+    }
   }
 
   async function toggleDone(task: Task) {
