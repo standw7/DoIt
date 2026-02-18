@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,8 @@ export function RecurringTasksSection({
   onUpdate,
   onDelete,
 }: RecurringTasksSectionProps) {
+  const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
+
   async function handleToggleActive(task: RecurringTask) {
     try {
       await onUpdate(task.id, { active: !task.active });
@@ -71,7 +74,7 @@ export function RecurringTasksSection({
                   checked={task.active}
                   onCheckedChange={() => handleToggleActive(task)}
                 />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setEditingTask(task)}>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium ${!task.active ? "text-muted-foreground line-through" : ""}`}>
                       {task.name}
@@ -102,6 +105,13 @@ export function RecurringTasksSection({
           </div>
         )}
       </CardContent>
+
+      <RecurringTaskDialog
+        editingTask={editingTask}
+        open={!!editingTask}
+        onOpenChange={(v) => { if (!v) setEditingTask(null); }}
+        onUpdate={onUpdate}
+      />
     </Card>
   );
 }
