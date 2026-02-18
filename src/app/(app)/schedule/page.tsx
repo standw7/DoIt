@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
+import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
+import { useRecurringGeneration } from "@/hooks/use-recurring-generation";
 import { DateSelector } from "@/components/daily/date-selector";
 import { DayTimeline } from "@/components/schedule/day-timeline";
 import { ScheduleButton } from "@/components/schedule/schedule-button";
@@ -36,6 +38,8 @@ export default function SchedulePage() {
     selectedDate
   );
 
+  const { recurringTasks } = useRecurringTasks();
+
   const fetchAllTasks = useCallback(async () => {
     const { data } = await supabase.from("tasks").select("*").order("created_at");
     setAllTasks((data ?? []) as Task[]);
@@ -44,6 +48,9 @@ export default function SchedulePage() {
   useEffect(() => {
     fetchAllTasks();
   }, [fetchAllTasks]);
+
+  // Auto-generate recurring task instances
+  useRecurringGeneration(recurringTasks, allTasks, fetchAllTasks);
 
   const loading = settingsLoading || tasksLoading || eventsLoading;
 

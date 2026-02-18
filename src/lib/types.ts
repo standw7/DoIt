@@ -27,6 +27,7 @@ export interface Task {
   sort_order: number;
   google_event_id: string | null;
   auto_assigned: boolean;
+  recurring_task_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -37,9 +38,10 @@ export interface ProjectWithProgress extends Project {
   done_count: number;
 }
 
-export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "google_event_id" | "auto_assigned"> & {
+export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "google_event_id" | "auto_assigned" | "recurring_task_id"> & {
   google_event_id?: string | null;
   auto_assigned?: boolean;
+  recurring_task_id?: string | null;
 };
 export type TaskUpdate = Partial<TaskInsert>;
 export type ProjectInsert = Omit<Project, "id" | "user_id" | "created_at" | "updated_at">;
@@ -67,6 +69,27 @@ export interface CalendarEvent {
   end: string;
   allDay: boolean;
 }
+
+export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+
+export interface RecurringTask {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  estimated_minutes: number;
+  priority: TaskPriority;
+  project_id: string | null;
+  recurrence_day: number; // 0=Sunday ... 6=Saturday
+  start_date: string;
+  end_date: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RecurringTaskInsert = Omit<RecurringTask, "id" | "user_id" | "created_at" | "updated_at">;
+export type RecurringTaskUpdate = Partial<RecurringTaskInsert>;
 
 export interface DayCapacity {
   date: string;
