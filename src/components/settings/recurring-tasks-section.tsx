@@ -106,12 +106,14 @@ export function RecurringTasksSection({
         )}
       </CardContent>
 
-      <RecurringTaskDialog
-        editingTask={editingTask}
-        open={!!editingTask}
-        onOpenChange={(v) => { if (!v) setEditingTask(null); }}
-        onUpdate={onUpdate}
-      />
+      {editingTask && (
+        <RecurringTaskDialog
+          editingTask={editingTask}
+          open={true}
+          onOpenChange={(v) => { if (!v) setEditingTask(null); }}
+          onUpdate={onUpdate}
+        />
+      )}
     </Card>
   );
 }
