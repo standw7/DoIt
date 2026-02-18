@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Settings, Calendar, Check, Loader2 } from "lucide-react";
 import { formatMinutes } from "@/lib/utils";
 import { UserSettingsUpdate } from "@/lib/types";
@@ -15,6 +16,7 @@ interface SettingsPanelProps {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
+  autoAssignEnabled: boolean;
   calendarConnected: boolean;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
@@ -24,6 +26,7 @@ export function SettingsPanel({
   workingHoursStart,
   workingHoursEnd,
   dailyBudget,
+  autoAssignEnabled,
   calendarConnected,
   onUpdate,
   onSetupCalendar,
@@ -67,16 +70,25 @@ export function SettingsPanel({
     }
   }
 
+  async function handleAutoAssignToggle(checked: boolean) {
+    try {
+      await onUpdate({ auto_assign_enabled: checked });
+    } catch {
+      toast.error("Failed to update setting");
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Settings className="h-4 w-4" />
-          Schedule Settings
+          Settings
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="space-y-6">
+        {/* Working hours */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="work-start">Work starts</Label>
             <Input
@@ -87,7 +99,6 @@ export function SettingsPanel({
               onBlur={() => commitTime("working_hours_start", localStart)}
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="work-end">Work ends</Label>
             <Input
@@ -98,37 +109,57 @@ export function SettingsPanel({
               onBlur={() => commitTime("working_hours_end", localEnd)}
             />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="budget">
-              Daily budget{" "}
-              <span className="text-muted-foreground text-xs">
-                ({formatMinutes(dailyBudget)})
-              </span>
-            </Label>
-            <Input
-              id="budget"
-              type="number"
-              min={30}
-              max={480}
-              step={15}
-              value={localBudget}
-              onChange={(e) => setLocalBudget(e.target.value)}
-              onBlur={commitBudget}
-            />
+        {/* Daily budget */}
+        <div className="space-y-2">
+          <Label htmlFor="budget">
+            Daily task budget{" "}
+            <span className="text-muted-foreground text-xs">
+              ({formatMinutes(dailyBudget)})
+            </span>
+          </Label>
+          <Input
+            id="budget"
+            type="number"
+            min={30}
+            max={480}
+            step={15}
+            value={localBudget}
+            onChange={(e) => setLocalBudget(e.target.value)}
+            onBlur={commitBudget}
+            className="max-w-[200px]"
+          />
+        </div>
+
+        {/* Auto-assign toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="auto-assign">Auto-assign tasks to days</Label>
+            <p className="text-xs text-muted-foreground">
+              Automatically assign new tasks to optimal days when no day is chosen
+            </p>
           </div>
+          <Switch
+            id="auto-assign"
+            checked={autoAssignEnabled}
+            onCheckedChange={handleAutoAssignToggle}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label>Google Calendar</Label>
-            {calendarConnected ? (
-              <Badge
-                variant="secondary"
-                className="flex w-fit items-center gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-              >
-                <Check className="h-3 w-3" />
-                Connected
-              </Badge>
-            ) : (
+        {/* Google Calendar */}
+        <div className="space-y-2">
+          <Label>Google Calendar</Label>
+          {calendarConnected ? (
+            <Badge
+              variant="secondary"
+              className="flex w-fit items-center gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+            >
+              <Check className="h-3 w-3" />
+              Connected
+            </Badge>
+          ) : (
+            <div>
               <Button
                 variant="outline"
                 size="sm"
@@ -142,8 +173,8 @@ export function SettingsPanel({
                 )}
                 Connect Calendar
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

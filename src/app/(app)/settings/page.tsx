@@ -28,6 +28,7 @@ export default function SettingsPage() {
         workingHoursStart={settings.working_hours_start}
         workingHoursEnd={settings.working_hours_end}
         dailyBudget={settings.daily_minutes_budget}
+        autoAssignEnabled={settings.auto_assign_enabled}
         calendarConnected={calendarConnected}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}

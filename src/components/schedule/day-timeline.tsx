@@ -171,11 +171,14 @@ export function DayTimeline({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <ListTodo className="h-4 w-4" />
-              Unscheduled Tasks
+              Planned Tasks
               <Badge variant="secondary" className="ml-auto">
                 {unscheduledTasks.length}
               </Badge>
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Assigned to this day — use &quot;Schedule my day&quot; to add them to Google Calendar
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

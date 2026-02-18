@@ -51,6 +51,7 @@ export interface UserSettings {
   working_hours_start: string;
   working_hours_end: string;
   daily_minutes_budget: number;
+  auto_assign_enabled: boolean;
   doit_calendar_id: string | null;
   created_at: string;
   updated_at: string;
