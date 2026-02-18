@@ -25,6 +25,8 @@ export interface Task {
   split_allowed: boolean;
   tags: string[] | null;
   sort_order: number;
+  google_event_id: string | null;
+  auto_assigned: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +37,40 @@ export interface ProjectWithProgress extends Project {
   done_count: number;
 }
 
-export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at">;
+export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "google_event_id" | "auto_assigned"> & {
+  google_event_id?: string | null;
+  auto_assigned?: boolean;
+};
 export type TaskUpdate = Partial<TaskInsert>;
 export type ProjectInsert = Omit<Project, "id" | "user_id" | "created_at" | "updated_at">;
 export type ProjectUpdate = Partial<ProjectInsert>;
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  working_hours_start: string;
+  working_hours_end: string;
+  daily_minutes_budget: number;
+  doit_calendar_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UserSettingsInsert = Omit<UserSettings, "id" | "user_id" | "created_at" | "updated_at">;
+export type UserSettingsUpdate = Partial<UserSettingsInsert>;
+
+export interface CalendarEvent {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+}
+
+export interface DayCapacity {
+  date: string;
+  totalMinutes: number;
+  eventMinutes: number;
+  taskMinutes: number;
+  freeMinutes: number;
+}
