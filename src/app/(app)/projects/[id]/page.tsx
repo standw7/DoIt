@@ -1,19 +1,40 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { useTasks } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
+import { useSettings } from "@/hooks/use-settings";
+import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { TaskCard } from "@/components/tasks/task-card";
 import { CreateTaskInline } from "@/components/tasks/create-task-inline";
 import { ProgressBar } from "@/components/projects/progress-bar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Task } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import { format, addDays } from "date-fns";
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { tasks, loading, createTask, updateTask, deleteTask, toggleDone } = useTasks({ projectId: id });
   const { projects } = useProjects();
+  const { settings } = useSettings();
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const futureStr = format(addDays(new Date(), 14), "yyyy-MM-dd");
+  const { events: calendarEvents } = useCalendarEvents(todayStr, futureStr);
+
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const supabaseRef = useRef(createClient());
+
+  useEffect(() => {
+    async function fetchAll() {
+      const { data } = await supabaseRef.current.from("tasks").select("*");
+      setAllTasks((data ?? []) as Task[]);
+    }
+    fetchAll();
+  }, [tasks]); // refetch when project tasks change
 
   const project = projects.find((p) => p.id === id);
 
@@ -37,7 +58,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       {project?.goal && <p className="text-muted-foreground mt-1">{project.goal}</p>}
       {project && <ProgressBar progress={project.progress} className="mt-4 mb-6" />}
 
-      <CreateTaskInline projectId={id} onCreate={createTask} />
+      <CreateTaskInline
+        projectId={id}
+        onCreate={createTask}
+        existingTasks={allTasks}
+        calendarEvents={calendarEvents}
+        workingHoursStart={settings.working_hours_start}
+        workingHoursEnd={settings.working_hours_end}
+        dailyBudget={settings.daily_minutes_budget}
+      />
 
       {backlogTasks.length > 0 && (
         <section className="mt-6">

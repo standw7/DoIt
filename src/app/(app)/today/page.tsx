@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/hooks/use-tasks";
+import { useSettings } from "@/hooks/use-settings";
+import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { Task } from "@/lib/types";
 import { DateSelector } from "@/components/daily/date-selector";
 import { SuggestedTasks } from "@/components/daily/suggested-tasks";
@@ -13,14 +15,23 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { todayString, getSuggestedTasks } from "@/lib/utils";
+import { format, addDays } from "date-fns";
 
 function TodayContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const date = searchParams.get("date") ?? todayString();
   const [allBacklogTasks, setAllBacklogTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [doneOpen, setDoneOpen] = useState(false);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
+
+  const { settings } = useSettings();
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const futureStr = format(addDays(new Date(), 14), "yyyy-MM-dd");
+  const { events: calendarEvents } = useCalendarEvents(todayStr, futureStr);
 
   const { tasks, loading, createTask, updateTask, deleteTask, toggleDone, assignToDay } = useTasks({ day: date });
 
@@ -36,6 +47,14 @@ function TodayContent() {
   useEffect(() => {
     fetchBacklog();
   }, [fetchBacklog]);
+
+  useEffect(() => {
+    async function fetchAll() {
+      const { data } = await supabaseRef.current.from("tasks").select("*");
+      setAllTasks((data ?? []) as Task[]);
+    }
+    fetchAll();
+  }, [tasks]); // refetch when day tasks change
 
   function changeDate(newDate: string) {
     router.push(`/today?date=${newDate}`);
@@ -54,7 +73,15 @@ function TodayContent() {
       <DateSelector date={date} onChange={changeDate} />
 
       <div className="mt-6">
-        <CreateTaskInline day={date} onCreate={createTask} />
+        <CreateTaskInline
+          day={date}
+          onCreate={createTask}
+          existingTasks={allTasks}
+          calendarEvents={calendarEvents}
+          workingHoursStart={settings.working_hours_start}
+          workingHoursEnd={settings.working_hours_end}
+          dailyBudget={settings.daily_minutes_budget}
+        />
       </div>
 
       {plannedTasks.length === 0 && doneTasks.length === 0 ? (

@@ -48,6 +48,9 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
                 {task.priority}
               </span>
             )}
+            {task.auto_assigned && (
+              <Badge variant="secondary" className="text-xs">auto</Badge>
+            )}
             {task.due_date && (
               <Badge variant="outline" className="text-xs">{task.due_date}</Badge>
             )}
