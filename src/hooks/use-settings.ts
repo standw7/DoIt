@@ -60,7 +60,10 @@ export function useSettings() {
 
   async function setupCalendar() {
     const res = await fetch("/api/calendar/setup", { method: "POST" });
-    if (!res.ok) throw new Error("Failed to set up calendar");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Setup failed (${res.status})`);
+    }
     const { calendarId } = await res.json();
     await fetchSettings();
     return calendarId;

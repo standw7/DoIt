@@ -60,8 +60,8 @@ export function SettingsPanel({
     try {
       await onSetupCalendar();
       toast.success("Calendar connected successfully");
-    } catch {
-      toast.error("Failed to connect calendar");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to connect calendar");
     } finally {
       setSettingUp(false);
     }

@@ -7,7 +7,10 @@ export async function POST() {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session?.provider_token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { error: "No Google token — please sign out and sign back in to grant calendar access" },
+      { status: 401 }
+    );
   }
 
   try {
@@ -27,10 +30,16 @@ export async function POST() {
         .update({ doit_calendar_id: calendarId })
         .eq("user_id", user.id);
     } else {
-      await supabase.from("user_settings").insert({
+      const { error } = await supabase.from("user_settings").insert({
         user_id: user.id,
         doit_calendar_id: calendarId,
       });
+      if (error) {
+        return NextResponse.json(
+          { error: `Database error: ${error.message}. Have you run migration 002?` },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({ calendarId });

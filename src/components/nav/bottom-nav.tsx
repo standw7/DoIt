@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FolderKanban, Clock } from "lucide-react";
+import { CalendarDays, FolderKanban, Clock, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/today", label: "Today", icon: CalendarDays },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/schedule", label: "Schedule", icon: Clock },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function BottomNav() {
