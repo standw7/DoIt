@@ -161,20 +161,12 @@ export function ScheduleButton({
       const workEndMin = timeToMinutes(workEnd);
 
       const freeSlots = getFreeSlots(events, date, workStartMin, workEndMin);
-      // Keep slots in chronological order — fill earliest gaps first
-      freeSlots.sort((a, b) => a.startMin - b.startMin);
 
-      // Sort tasks by priority (high first) then due date (earliest first)
-      const sortedTasks = [...unscheduledTasks].sort((a, b) => {
-        const pOrder = { high: 0, medium: 1, low: 2 };
-        const pa = pOrder[a.priority] ?? 1;
-        const pb = pOrder[b.priority] ?? 1;
-        if (pa !== pb) return pa - pb;
-        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-        if (a.due_date) return -1;
-        if (b.due_date) return 1;
-        return 0;
-      });
+      // Sort tasks shortest first — small tasks fill tight gaps,
+      // large gaps preserved for bigger tasks
+      const sortedTasks = [...unscheduledTasks].sort(
+        (a, b) => (a.estimated_minutes ?? 0) - (b.estimated_minutes ?? 0)
+      );
 
       let scheduled = 0;
       let skipped = 0;
@@ -188,16 +180,23 @@ export function ScheduleButton({
         const duration = task.estimated_minutes ?? 0;
         if (duration <= 0) continue;
 
-        const slotIndex = slotRemaining.findIndex(
-          (s) => s.endMin - s.cursor >= duration
-        );
+        // Best-fit: find the smallest gap that fits this task
+        let bestIdx = -1;
+        let bestAvailable = Infinity;
+        for (let i = 0; i < slotRemaining.length; i++) {
+          const available = slotRemaining[i].endMin - slotRemaining[i].cursor;
+          if (available >= duration && available < bestAvailable) {
+            bestIdx = i;
+            bestAvailable = available;
+          }
+        }
 
-        if (slotIndex === -1) {
+        if (bestIdx === -1) {
           skipped++;
           continue;
         }
 
-        const slot = slotRemaining[slotIndex];
+        const slot = slotRemaining[bestIdx];
         const startISO = minutesToISO(date, slot.cursor);
         const endISO = minutesToISO(date, slot.cursor + duration);
 

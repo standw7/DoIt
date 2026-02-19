@@ -111,65 +111,62 @@ export function DayTimeline({
       });
     }
 
-    // Collect unscheduled tasks to auto-stack
-    const unscheduled = tasks.filter(
-      (t) =>
-        t.status === "planned" &&
-        !t.google_event_id &&
-        t.estimated_minutes
-    );
+    // Collect unscheduled tasks to auto-stack — shortest first for best-fit
+    const unscheduled = tasks
+      .filter(
+        (t) =>
+          t.status === "planned" &&
+          !t.google_event_id &&
+          t.estimated_minutes
+      )
+      .sort((a, b) => (a.estimated_minutes ?? 0) - (b.estimated_minutes ?? 0));
 
     // Sort events by start time to find gaps
     const sorted = [...eventBlocks].sort((a, b) => a.startMin - b.startMin);
 
     // Build list of free gaps within working hours
-    const gaps: { start: number; end: number }[] = [];
-    let cursor = workStartMin;
+    const gapList: { start: number; cursor: number; end: number }[] = [];
+    let gapBuildCursor = workStartMin;
     for (const block of sorted) {
-      if (block.startMin > cursor) {
-        gaps.push({ start: cursor, end: block.startMin });
+      if (block.startMin > gapBuildCursor) {
+        gapList.push({ start: gapBuildCursor, cursor: gapBuildCursor, end: block.startMin });
       }
-      cursor = Math.max(cursor, block.endMin);
+      gapBuildCursor = Math.max(gapBuildCursor, block.endMin);
     }
-    if (cursor < workEndMin) {
-      gaps.push({ start: cursor, end: workEndMin });
+    if (gapBuildCursor < workEndMin) {
+      gapList.push({ start: gapBuildCursor, cursor: gapBuildCursor, end: workEndMin });
     }
 
-    // Place tasks into gaps
+    // Best-fit: for each task, find the smallest gap that fits it
     const taskBlocks: TimeBlock[] = [];
     const overflowTasks: Task[] = [];
-    let gapIdx = 0;
-    let gapCursor = gaps.length > 0 ? gaps[0].start : workEndMin;
 
     for (const task of unscheduled) {
       const dur = task.estimated_minutes!;
-      let placed = false;
+      let bestIdx = -1;
+      let bestAvailable = Infinity;
 
-      while (gapIdx < gaps.length) {
-        const gap = gaps[gapIdx];
-        const available = gap.end - gapCursor;
-        if (dur <= available) {
-          taskBlocks.push({
-            type: "task",
-            id: task.id,
-            label: task.name,
-            startMin: gapCursor,
-            endMin: gapCursor + dur,
-            durationMinutes: dur,
-            projectName: task.project_id ? projectMap[task.project_id] : undefined,
-          });
-          gapCursor += dur;
-          placed = true;
-          break;
-        }
-        // Move to next gap
-        gapIdx++;
-        if (gapIdx < gaps.length) {
-          gapCursor = gaps[gapIdx].start;
+      for (let i = 0; i < gapList.length; i++) {
+        const available = gapList[i].end - gapList[i].cursor;
+        if (available >= dur && available < bestAvailable) {
+          bestIdx = i;
+          bestAvailable = available;
         }
       }
 
-      if (!placed) {
+      if (bestIdx !== -1) {
+        const gap = gapList[bestIdx];
+        taskBlocks.push({
+          type: "task",
+          id: task.id,
+          label: task.name,
+          startMin: gap.cursor,
+          endMin: gap.cursor + dur,
+          durationMinutes: dur,
+          projectName: task.project_id ? projectMap[task.project_id] : undefined,
+        });
+        gap.cursor += dur;
+      } else {
         overflowTasks.push(task);
       }
     }
