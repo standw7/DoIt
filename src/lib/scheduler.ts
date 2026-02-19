@@ -99,13 +99,13 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       budgetScore = Math.max(0, 70 - (overBy / dailyBudget) * 70);
     }
 
-    // --- Spread score (0-100): prefer earlier days to spread work out ---
+    // --- Spread score (0-100): strongly prefer earlier days ---
     let spreadScore: number;
     if (totalDays <= 1) {
       spreadScore = 50;
     } else {
-      // Earlier days score higher — avoid cramming near deadline
-      spreadScore = 90 - (i / (totalDays - 1)) * 60;
+      // Earlier days score much higher — push work ahead of deadlines
+      spreadScore = 100 - (i / (totalDays - 1)) * 80;
       // Bonus for days with fewer tasks (encourages even distribution)
       if (dayTasks.length === 0) spreadScore += 10;
       spreadScore = Math.min(100, spreadScore);
@@ -120,8 +120,8 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     }
 
     const total =
-      budgetScore * 0.45 +
-      spreadScore * 0.35 +
+      budgetScore * 0.40 +
+      spreadScore * 0.40 +
       urgencyScore * 0.20;
 
     scores.push({

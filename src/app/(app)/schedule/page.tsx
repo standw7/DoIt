@@ -14,6 +14,7 @@ import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
 import { getDayCapacity, pickBestDayWithInfo } from "@/lib/scheduler";
+import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, Wand2 } from "lucide-react";
@@ -36,9 +37,18 @@ export default function SchedulePage() {
   } = useSettings();
 
   const { tasks, loading: tasksLoading, updateTask } = useTasks({ day: selectedDate });
-  const { events, loading: eventsLoading, error: calendarError, refetch: refetchEvents } = useCalendarEvents(
-    selectedDate,
-    selectedDate
+
+  // Fetch 14-day window so auto-assign has full calendar picture
+  const futureStr = useMemo(() => format(addDays(new Date(), 14), "yyyy-MM-dd"), []);
+  const { events: allEvents, loading: eventsLoading, error: calendarError, refetch: refetchEvents } = useCalendarEvents(
+    todayString(),
+    futureStr
+  );
+
+  // Filter to selected date for display components
+  const events = useMemo(
+    () => allEvents.filter((e) => e.start.startsWith(selectedDate) || e.allDay),
+    [allEvents, selectedDate]
   );
 
   const { recurringTasks } = useRecurringTasks();
@@ -96,7 +106,15 @@ export default function SchedulePage() {
     let overBudgetDays = new Set<string>();
     let currentTasks = [...allTasks];
 
-    for (const task of unassignedTasks) {
+    // Sort by due date (earliest first) so urgent tasks claim the best days first
+    const sorted = [...unassignedTasks].sort((a, b) => {
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return a.due_date.localeCompare(b.due_date);
+    });
+
+    for (const task of sorted) {
       const estimatedMinutes = task.estimated_minutes ?? 30;
       const result = pickBestDayWithInfo({
         task: {
@@ -105,7 +123,7 @@ export default function SchedulePage() {
           priority: task.priority,
         },
         existingTasks: currentTasks,
-        calendarEvents: events,
+        calendarEvents: allEvents,
         workingHoursStart: settings.working_hours_start,
         workingHoursEnd: settings.working_hours_end,
         dailyBudget: settings.daily_minutes_budget,
