@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
       // Send email
       await resend.emails.send({
-        from: "DoIt <digest@getdoit.vercel.app>",
+        from: "DoIt <onboarding@resend.dev>",
         to: user.email,
         subject: taskList.length > 0
           ? `${taskList.length} task${taskList.length > 1 ? "s" : ""} for today`
