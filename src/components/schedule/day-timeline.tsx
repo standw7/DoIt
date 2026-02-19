@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 interface DayTimelineProps {
@@ -15,6 +15,7 @@ interface DayTimelineProps {
   workEnd: string;
   isToday?: boolean;
   projectMap?: Record<string, string>;
+  onClearTask?: (taskId: string) => void;
 }
 
 function timeToMinutes(time: string): number {
@@ -76,6 +77,7 @@ export function DayTimeline({
   workEnd,
   isToday = false,
   projectMap = {},
+  onClearTask,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
@@ -226,11 +228,24 @@ export function DayTimeline({
                               : {}),
                           }}
                         >
-                          <div className="font-medium">{block.label}</div>
-                          <div className="opacity-70">
-                            {formatMinutes(block.durationMinutes)}
-                            {block.projectName && (
-                              <span className="ml-1.5">· {block.projectName}</span>
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="min-w-0">
+                              <div className="font-medium">{block.label}</div>
+                              <div className="opacity-70">
+                                {formatMinutes(block.durationMinutes)}
+                                {block.projectName && (
+                                  <span className="ml-1.5">· {block.projectName}</span>
+                                )}
+                              </div>
+                            </div>
+                            {block.type === "task" && onClearTask && (
+                              <button
+                                onClick={() => onClearTask(block.id)}
+                                className="shrink-0 rounded p-0.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                                title="Unassign from this day"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
                             )}
                           </div>
                         </div>

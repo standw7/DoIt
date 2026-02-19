@@ -142,6 +142,12 @@ export default function SchedulePage() {
     }
   }
 
+  async function handleClearTask(taskId: string) {
+    await updateTask(taskId, { day: null, status: "backlog", auto_assigned: false } as any);
+    await fetchAllTasks();
+    toast.success("Task unassigned — ready for reassignment");
+  }
+
   async function handleEventCreated(taskId: string, eventId: string) {
     await updateTask(taskId, { google_event_id: eventId });
     await refetchEvents();
@@ -232,6 +238,7 @@ export default function SchedulePage() {
           workEnd={settings.working_hours_end}
           isToday={selectedDate === today}
           projectMap={projectMap}
+          onClearTask={handleClearTask}
         />
       )}
 
