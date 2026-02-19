@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, CalendarPlus, CalendarMinus, Pencil } from "lucide-react";
+import { MoreHorizontal, Trash2, CalendarPlus, CalendarMinus, Pencil, Clock } from "lucide-react";
 import { Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
@@ -24,6 +24,7 @@ interface TaskCardProps {
   onAssignToDay?: (taskId: string) => void;
   onUnschedule?: (task: Task) => void;
   projects?: ProjectOption[];
+  scheduledTime?: string;
 }
 
 const priorityColors: Record<string, string> = {
@@ -32,7 +33,7 @@ const priorityColors: Record<string, string> = {
   low: "text-blue-500",
 };
 
-export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay, onUnschedule, projects }: TaskCardProps) {
+export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay, onUnschedule, projects, scheduledTime }: TaskCardProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const isDone = task.status === "done";
 
@@ -47,6 +48,12 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailOpen(true)}>
           <p className={cn("text-sm font-medium", isDone && "line-through")}>{task.name}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {scheduledTime && (
+              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {scheduledTime}
+              </span>
+            )}
             {task.estimated_minutes && (
               <span className="text-xs text-muted-foreground">{formatMinutes(task.estimated_minutes)}</span>
             )}

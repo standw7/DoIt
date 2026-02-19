@@ -16,7 +16,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { todayString, getSuggestedTasks } from "@/lib/utils";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
+import { CalendarEvent } from "@/lib/types";
 import { toast } from "sonner";
 
 function TodayContent() {
@@ -74,9 +75,36 @@ function TodayContent() {
     }
   }
 
+  // Build a map of google_event_id → event start time for scheduled time display
+  const eventTimeMap = new Map<string, string>();
+  for (const event of calendarEvents) {
+    if (!event.allDay && event.start) {
+      eventTimeMap.set(event.id, event.start);
+    }
+  }
+
+  function getScheduledTime(task: Task): string | undefined {
+    if (!task.google_event_id) return undefined;
+    const start = eventTimeMap.get(task.google_event_id);
+    if (!start) return undefined;
+    try {
+      return format(parseISO(start), "h:mm a");
+    } catch {
+      return undefined;
+    }
+  }
+
+  function getScheduledSortKey(task: Task): string {
+    if (task.google_event_id) {
+      const start = eventTimeMap.get(task.google_event_id);
+      if (start) return start;
+    }
+    return task.due_date ?? "9999";
+  }
+
   const plannedTasks = tasks
     .filter((t) => t.status === "planned" || t.status === "scheduled")
-    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+    .sort((a, b) => getScheduledSortKey(a).localeCompare(getScheduledSortKey(b)));
   const doneTasks = tasks.filter((t) => t.status === "done");
   const suggested = getSuggestedTasks(allBacklogTasks, date);
 
@@ -116,7 +144,7 @@ function TodayContent() {
               </h2>
               <div className="space-y-2">
                 {plannedTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
+                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} scheduledTime={getScheduledTime(task)} />
                 ))}
               </div>
             </section>

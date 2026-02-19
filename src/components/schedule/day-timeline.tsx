@@ -258,6 +258,45 @@ export function DayTimeline({
         </CardContent>
       </Card>
 
+      {onClearTask && tasks.filter((t) => t.status !== "done" && t.status !== "skipped").length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tasks on this day</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {tasks
+              .filter((t) => t.status !== "done" && t.status !== "skipped")
+              .map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="font-medium">{task.name}</span>
+                    {task.estimated_minutes && (
+                      <span className="ml-2 text-muted-foreground">
+                        {formatMinutes(task.estimated_minutes)}
+                      </span>
+                    )}
+                    {task.project_id && projectMap[task.project_id] && (
+                      <span className="ml-1.5 text-muted-foreground">
+                        · {projectMap[task.project_id]}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onClearTask(task.id)}
+                    className="ml-2 shrink-0 rounded p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                    title="Unassign from this day"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      )}
+
       {isToday && (() => {
         const now = new Date();
         const nowMin = now.getHours() * 60 + now.getMinutes();
