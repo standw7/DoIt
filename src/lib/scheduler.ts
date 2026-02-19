@@ -134,12 +134,28 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
   return scores.sort((a, b) => b.score - a.score);
 }
 
+export interface PickResult {
+  date: string;
+  overBudget: boolean;
+}
+
 export function pickBestDay(input: SchedulerInput): string {
+  const result = pickBestDayWithInfo(input);
+  return result.date;
+}
+
+export function pickBestDayWithInfo(input: SchedulerInput): PickResult {
   const scores = scoreDays(input);
-  if (scores.length === 0) {
-    return format(new Date(), "yyyy-MM-dd");
+  if (scores.length > 0) {
+    return {
+      date: scores[0].date,
+      overBudget: scores[0].breakdown.budget < 70,
+    };
   }
-  return scores[0].date;
+
+  // No day has physical capacity — fall back to due date or today
+  const fallback = input.task.due_date ?? format(new Date(), "yyyy-MM-dd");
+  return { date: fallback, overBudget: true };
 }
 
 export function getDayCapacity(

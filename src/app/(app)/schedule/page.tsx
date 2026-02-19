@@ -13,7 +13,7 @@ import { ScheduleButton } from "@/components/schedule/schedule-button";
 import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
-import { getDayCapacity, pickBestDay } from "@/lib/scheduler";
+import { getDayCapacity, pickBestDayWithInfo } from "@/lib/scheduler";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, Wand2 } from "lucide-react";
@@ -93,11 +93,12 @@ export default function SchedulePage() {
     setAssigning(true);
 
     let assigned = 0;
+    let overBudgetDays = new Set<string>();
     let currentTasks = [...allTasks];
 
     for (const task of unassignedTasks) {
       const estimatedMinutes = task.estimated_minutes ?? 30;
-      const bestDay = pickBestDay({
+      const result = pickBestDayWithInfo({
         task: {
           estimated_minutes: estimatedMinutes,
           due_date: task.due_date,
@@ -110,15 +111,19 @@ export default function SchedulePage() {
         dailyBudget: settings.daily_minutes_budget,
       });
 
+      if (result.overBudget) {
+        overBudgetDays.add(result.date);
+      }
+
       try {
         await updateTask(task.id, {
-          day: bestDay,
+          day: result.date,
           status: "planned",
           estimated_minutes: estimatedMinutes,
           auto_assigned: true,
         });
         currentTasks = currentTasks.map((t) =>
-          t.id === task.id ? { ...t, day: bestDay, status: "planned" as const, estimated_minutes: estimatedMinutes } : t
+          t.id === task.id ? { ...t, day: result.date, status: "planned" as const, estimated_minutes: estimatedMinutes } : t
         );
         assigned++;
       } catch {
@@ -129,6 +134,12 @@ export default function SchedulePage() {
     await fetchAllTasks();
     setAssigning(false);
     toast.success(`Auto-assigned ${assigned} task${assigned > 1 ? "s" : ""} to days`);
+    if (overBudgetDays.size > 0) {
+      toast.warning(
+        `${overBudgetDays.size} day${overBudgetDays.size > 1 ? "s" : ""} exceed${overBudgetDays.size === 1 ? "s" : ""} your daily budget — too many tasks due with no earlier availability`,
+        { duration: 6000 }
+      );
+    }
   }
 
   async function handleEventCreated(taskId: string, eventId: string) {
