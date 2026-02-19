@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Calendar, Check, Loader2 } from "lucide-react";
+import { Settings, Calendar, Check, Loader2, Mail, MapPin } from "lucide-react";
 import { formatMinutes } from "@/lib/utils";
 import { UserSettingsUpdate } from "@/lib/types";
+import { geocodeCity } from "@/lib/weather";
 import { toast } from "sonner";
 
 interface SettingsPanelProps {
@@ -18,6 +19,10 @@ interface SettingsPanelProps {
   dailyBudget: number;
   autoAssignEnabled: boolean;
   calendarConnected: boolean;
+  digestEnabled: boolean;
+  digestCity: string | null;
+  digestLatitude: number | null;
+  digestLongitude: number | null;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
 }
@@ -28,6 +33,10 @@ export function SettingsPanel({
   dailyBudget,
   autoAssignEnabled,
   calendarConnected,
+  digestEnabled,
+  digestCity,
+  digestLatitude,
+  digestLongitude,
   onUpdate,
   onSetupCalendar,
 }: SettingsPanelProps) {
@@ -35,6 +44,11 @@ export function SettingsPanel({
   const [localStart, setLocalStart] = useState(workingHoursStart);
   const [localEnd, setLocalEnd] = useState(workingHoursEnd);
   const [localBudget, setLocalBudget] = useState(String(dailyBudget));
+  const [localCity, setLocalCity] = useState(digestCity ?? "");
+  const [verifying, setVerifying] = useState(false);
+  const [verifiedLocation, setVerifiedLocation] = useState<string | null>(
+    digestLatitude && digestCity ? `${digestCity} ✓` : null
+  );
 
   async function commitTime(field: "working_hours_start" | "working_hours_end", value: string) {
     if (!value) return;
@@ -78,7 +92,39 @@ export function SettingsPanel({
     }
   }
 
+  async function handleVerifyCity() {
+    if (!localCity.trim()) return;
+    setVerifying(true);
+    try {
+      const result = await geocodeCity(localCity.trim());
+      if (result) {
+        await onUpdate({
+          digest_city: localCity.trim(),
+          digest_latitude: result.latitude,
+          digest_longitude: result.longitude,
+        });
+        setVerifiedLocation(result.displayName);
+        toast.success(`Location set to ${result.displayName}`);
+      } else {
+        toast.error("City not found — try a different name");
+      }
+    } catch {
+      toast.error("Failed to verify city");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleDigestToggle(checked: boolean) {
+    try {
+      await onUpdate({ digest_enabled: checked });
+    } catch {
+      toast.error("Failed to update setting");
+    }
+  }
+
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -178,5 +224,65 @@ export function SettingsPanel({
         </div>
       </CardContent>
     </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Mail className="h-4 w-4" />
+          Daily Digest
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Get a morning email with your tasks and weather forecast
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="digest-toggle">Send daily digest email</Label>
+          <Switch
+            id="digest-toggle"
+            checked={digestEnabled}
+            onCheckedChange={handleDigestToggle}
+          />
+        </div>
+
+        {digestEnabled && (
+          <div className="space-y-2">
+            <Label>City for weather</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={localCity}
+                  onChange={(e) => {
+                    setLocalCity(e.target.value);
+                    setVerifiedLocation(null);
+                  }}
+                  placeholder="e.g. Seattle"
+                  className="pl-8"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleVerifyCity}
+                disabled={verifying || !localCity.trim()}
+              >
+                {verifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Verify"
+                )}
+              </Button>
+            </div>
+            {verifiedLocation && (
+              <p className="text-xs text-green-600">
+                ✓ {verifiedLocation}
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+    </>
   );
 }

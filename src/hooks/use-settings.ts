@@ -10,6 +10,10 @@ const DEFAULT_SETTINGS = {
   daily_minutes_budget: 120,
   auto_assign_enabled: true,
   doit_calendar_id: null as string | null,
+  digest_enabled: false,
+  digest_city: null as string | null,
+  digest_latitude: null as number | null,
+  digest_longitude: null as number | null,
 };
 
 export function useSettings() {
@@ -78,6 +82,10 @@ export function useSettings() {
     daily_minutes_budget: settings?.daily_minutes_budget ?? DEFAULT_SETTINGS.daily_minutes_budget,
     auto_assign_enabled: settings?.auto_assign_enabled ?? DEFAULT_SETTINGS.auto_assign_enabled,
     doit_calendar_id: settings?.doit_calendar_id ?? null,
+    digest_enabled: settings?.digest_enabled ?? DEFAULT_SETTINGS.digest_enabled,
+    digest_city: settings?.digest_city ?? DEFAULT_SETTINGS.digest_city,
+    digest_latitude: settings?.digest_latitude ?? DEFAULT_SETTINGS.digest_latitude,
+    digest_longitude: settings?.digest_longitude ?? DEFAULT_SETTINGS.digest_longitude,
   };
 
   return {

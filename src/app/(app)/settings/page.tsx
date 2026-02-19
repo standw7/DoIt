@@ -30,6 +30,10 @@ export default function SettingsPage() {
         dailyBudget={settings.daily_minutes_budget}
         autoAssignEnabled={settings.auto_assign_enabled}
         calendarConnected={calendarConnected}
+        digestEnabled={settings.digest_enabled}
+        digestCity={settings.digest_city}
+        digestLatitude={settings.digest_latitude}
+        digestLongitude={settings.digest_longitude}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}
       />
