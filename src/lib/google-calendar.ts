@@ -36,6 +36,52 @@ export async function getCalendarEvents(
   }));
 }
 
+export async function listCalendars(
+  accessToken: string
+): Promise<{ id: string; summary: string }[]> {
+  const res = await fetch(
+    `${CALENDAR_API}/users/me/calendarList?minAccessRole=reader`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Calendar list API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return (data.items ?? []).map((item: any) => ({
+    id: item.id,
+    summary: item.summary ?? "(No title)",
+  }));
+}
+
+export async function getAllCalendarEvents(
+  accessToken: string,
+  timeMin: string,
+  timeMax: string
+): Promise<CalendarEvent[]> {
+  const calendars = await listCalendars(accessToken);
+  const seen = new Set<string>();
+  const allEvents: CalendarEvent[] = [];
+
+  // Fetch events from all calendars in parallel
+  const results = await Promise.allSettled(
+    calendars.map((cal) => getCalendarEvents(accessToken, cal.id, timeMin, timeMax))
+  );
+
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    for (const event of result.value) {
+      if (!seen.has(event.id)) {
+        seen.add(event.id);
+        allEvents.push(event);
+      }
+    }
+  }
+
+  return allEvents;
+}
+
 export async function createCalendarEvent(
   accessToken: string,
   calendarId: string,
