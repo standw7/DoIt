@@ -55,6 +55,10 @@ export interface UserSettings {
   daily_minutes_budget: number;
   auto_assign_enabled: boolean;
   doit_calendar_id: string | null;
+  digest_enabled: boolean;
+  digest_city: string | null;
+  digest_latitude: number | null;
+  digest_longitude: number | null;
   created_at: string;
   updated_at: string;
 }
