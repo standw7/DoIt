@@ -22,6 +22,7 @@ import { toast } from "sonner";
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [allTasksLoaded, setAllTasksLoaded] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
@@ -43,14 +44,15 @@ export default function SchedulePage() {
   const fetchAllTasks = useCallback(async () => {
     const { data } = await supabase.from("tasks").select("*").order("created_at");
     setAllTasks((data ?? []) as Task[]);
+    setAllTasksLoaded(true);
   }, [supabase]);
 
   useEffect(() => {
     fetchAllTasks();
   }, [fetchAllTasks]);
 
-  // Auto-generate recurring task instances
-  useRecurringGeneration(recurringTasks, allTasks, fetchAllTasks);
+  // Auto-generate recurring task instances (only after allTasks has been fetched to avoid duplicates)
+  useRecurringGeneration(recurringTasks, allTasksLoaded ? allTasks : null, fetchAllTasks);
 
   const loading = settingsLoading || tasksLoading || eventsLoading;
 

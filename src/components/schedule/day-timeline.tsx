@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 interface DayTimelineProps {
@@ -157,19 +157,6 @@ export function DayTimeline({
 
     return { blocks: allBlocks, overflowTasks };
   }, [events, tasks, date, workStartMin, workEndMin]);
-
-  const hasContent = blocks.length > 0 || overflowTasks.length > 0;
-
-  if (!hasContent) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <CalendarDays className="mb-3 h-8 w-8" />
-          <p className="text-sm">No events or tasks for this day</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">

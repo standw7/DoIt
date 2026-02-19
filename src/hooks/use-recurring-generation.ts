@@ -11,7 +11,7 @@ import { getInstancesNeeded } from "@/lib/recurring";
  */
 export function useRecurringGeneration(
   recurringTasks: RecurringTask[],
-  allTasks: Task[],
+  allTasks: Task[] | null,
   onTasksGenerated?: () => void
 ) {
   const supabaseRef = useRef(createClient());
@@ -21,6 +21,7 @@ export function useRecurringGeneration(
   const generate = useCallback(async () => {
     if (generatingRef.current) return;
     if (recurringTasks.length === 0) return;
+    if (allTasks === null) return; // Wait until tasks have been loaded
 
     const needed = getInstancesNeeded(recurringTasks, allTasks);
     if (needed.length === 0) return;
