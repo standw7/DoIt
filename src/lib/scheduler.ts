@@ -2,7 +2,7 @@ import { Task, CalendarEvent } from "./types";
 import { format, addDays, parseISO, differenceInCalendarDays, differenceInMinutes } from "date-fns";
 
 interface SchedulerInput {
-  task: { estimated_minutes: number; due_date: string | null; priority: "low" | "medium" | "high" };
+  task: { estimated_minutes: number; due_date: string | null; priority: "low" | "medium" | "high"; available_from?: string | null };
   existingTasks: Task[];
   calendarEvents: CalendarEvent[];
   workingHoursStart: string;
@@ -67,6 +67,11 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     const candidateDate = addDays(today, i);
     const dateStr = format(candidateDate, "yyyy-MM-dd");
     const isToday = dateStr === todayStr;
+
+    // Skip days before the task becomes available
+    if (task.available_from && dateStr < task.available_from) {
+      continue;
+    }
 
     // Calculate available time
     const dayEvents = calendarEvents.filter((e) => e.start.startsWith(dateStr) && !e.allDay);

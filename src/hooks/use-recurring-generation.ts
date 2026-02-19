@@ -34,7 +34,7 @@ export function useRecurringGeneration(
       return;
     }
 
-    for (const { template, dueDate, day } of needed) {
+    for (const { template, dueDate, day, availableFrom } of needed) {
       await supabase.from("tasks").insert({
         user_id: user.id,
         name: template.name,
@@ -50,6 +50,7 @@ export function useRecurringGeneration(
         tags: null,
         auto_assigned: true,
         recurring_task_id: template.id,
+        available_from: availableFrom,
       });
     }
 

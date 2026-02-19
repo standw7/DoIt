@@ -65,6 +65,7 @@ export function CreateTaskDialog({
   const [showDetails, setShowDetails] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
+  const [availableDaysBefore, setAvailableDaysBefore] = useState<string>("");
   const [endDate, setEndDate] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("none");
 
@@ -79,6 +80,7 @@ export function CreateTaskDialog({
     setShowDetails(false);
     setIsRecurring(false);
     setRecurrenceDay(0);
+    setAvailableDaysBefore("");
     setEndDate("");
     setSelectedProjectId("none");
   }
@@ -99,6 +101,7 @@ export function CreateTaskDialog({
           priority,
           project_id: effectiveProjectId,
           recurrence_day: recurrenceDay,
+          available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
           active: true,
@@ -210,6 +213,20 @@ export function CreateTaskDialog({
                     </Button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <Label>Available days before due (optional)</Label>
+                <Input
+                  type="number"
+                  value={availableDaysBefore}
+                  onChange={(e) => setAvailableDaysBefore(e.target.value)}
+                  placeholder="e.g., 5"
+                  min={1}
+                  max={7}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Task opens N days before due (e.g., prelab opens 5 days early)
+                </p>
               </div>
               <div>
                 <Label>End date (optional)</Label>

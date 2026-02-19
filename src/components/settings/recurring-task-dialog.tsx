@@ -45,6 +45,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
   const [customMinutes, setCustomMinutes] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
+  const [availableDaysBefore, setAvailableDaysBefore] = useState<string>("");
   const [endDate, setEndDate] = useState("");
 
   function reset() {
@@ -54,6 +55,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
     setCustomMinutes("");
     setPriority("medium");
     setRecurrenceDay(0);
+    setAvailableDaysBefore("");
     setEndDate("");
   }
 
@@ -72,6 +74,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
       }
       setPriority(editingTask.priority);
       setRecurrenceDay(editingTask.recurrence_day);
+      setAvailableDaysBefore(editingTask.available_days_before != null ? String(editingTask.available_days_before) : "");
       setEndDate(editingTask.end_date ?? "");
     } else {
       reset();
@@ -92,7 +95,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
           priority,
           project_id: editingTask.project_id,
           recurrence_day: recurrenceDay,
-          // Keep original start_date on edit
+          available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: editingTask.start_date,
           end_date: endDate || null,
           active: editingTask.active,
@@ -107,6 +110,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
           priority,
           project_id: null,
           recurrence_day: recurrenceDay,
+          available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
           active: true,
@@ -156,6 +160,21 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
               </Button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <Label>Available days before due (optional)</Label>
+          <Input
+            type="number"
+            value={availableDaysBefore}
+            onChange={(e) => setAvailableDaysBefore(e.target.value)}
+            placeholder="e.g., 5"
+            min={1}
+            max={7}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Task opens N days before it&apos;s due (e.g., prelab opens 5 days early)
+          </p>
         </div>
 
         <div>

@@ -121,6 +121,7 @@ export default function SchedulePage() {
           estimated_minutes: estimatedMinutes,
           due_date: task.due_date,
           priority: task.priority,
+          available_from: task.available_from,
         },
         existingTasks: currentTasks,
         calendarEvents: allEvents,

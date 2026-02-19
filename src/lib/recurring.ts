@@ -1,5 +1,5 @@
 import { RecurringTask, Task } from "./types";
-import { format, addDays, parseISO, getDay, nextDay, isBefore, isAfter, isEqual } from "date-fns";
+import { format, addDays, subDays, parseISO, getDay, nextDay, isBefore, isAfter, isEqual } from "date-fns";
 
 /**
  * Finds which recurring task instances need to be created.
@@ -9,11 +9,11 @@ export function getInstancesNeeded(
   templates: RecurringTask[],
   existingTasks: Task[],
   weeksAhead = 2
-): { template: RecurringTask; dueDate: string; day: string }[] {
+): { template: RecurringTask; dueDate: string; day: string; availableFrom: string | null }[] {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
   const horizon = addDays(today, weeksAhead * 7);
-  const needed: { template: RecurringTask; dueDate: string; day: string }[] = [];
+  const needed: { template: RecurringTask; dueDate: string; day: string; availableFrom: string | null }[] = [];
 
   for (const template of templates) {
     if (!template.active) continue;
@@ -47,10 +47,14 @@ export function getInstancesNeeded(
         );
 
         if (!alreadyExists) {
+          const availableFrom = template.available_days_before != null
+            ? format(subDays(cursor, template.available_days_before), "yyyy-MM-dd")
+            : null;
           needed.push({
             template,
             dueDate: dateStr,
-            day: dateStr, // Due date and scheduled day are the same for recurring tasks
+            day: dateStr,
+            availableFrom,
           });
         }
       }
