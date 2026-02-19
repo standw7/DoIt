@@ -166,6 +166,18 @@ export default function SchedulePage() {
     toast.success("Task unassigned — ready for reassignment");
   }
 
+  async function handleRemoveFromCalendar(task: Task) {
+    if (!task.google_event_id) return;
+    try {
+      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
+      await refetchEvents();
+      toast.success("Removed from calendar");
+    } catch {
+      toast.error("Failed to remove from calendar");
+    }
+  }
+
   async function handleEventCreated(taskId: string, eventId: string) {
     await updateTask(taskId, { google_event_id: eventId });
     await refetchEvents();
@@ -257,6 +269,7 @@ export default function SchedulePage() {
           isToday={selectedDate === today}
           projectMap={projectMap}
           onClearTask={handleClearTask}
+          onRemoveFromCalendar={handleRemoveFromCalendar}
         />
       )}
 

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 interface DayTimelineProps {
@@ -16,6 +16,7 @@ interface DayTimelineProps {
   isToday?: boolean;
   projectMap?: Record<string, string>;
   onClearTask?: (taskId: string) => void;
+  onRemoveFromCalendar?: (task: Task) => void;
 }
 
 function timeToMinutes(time: string): number {
@@ -78,6 +79,7 @@ export function DayTimeline({
   isToday = false,
   projectMap = {},
   onClearTask,
+  onRemoveFromCalendar,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
@@ -258,15 +260,18 @@ export function DayTimeline({
         </CardContent>
       </Card>
 
-      {onClearTask && tasks.filter((t) => t.status !== "done" && t.status !== "skipped").length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Tasks on this day</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {tasks
-              .filter((t) => t.status !== "done" && t.status !== "skipped")
-              .map((task) => (
+      {(() => {
+        const activeTasks = tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
+        if (activeTasks.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Tasks on this day ({activeTasks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {activeTasks.map((task) => (
                 <div
                   key={task.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
@@ -283,19 +288,36 @@ export function DayTimeline({
                         · {projectMap[task.project_id]}
                       </span>
                     )}
+                    {task.google_event_id && (
+                      <span className="ml-1.5 text-xs text-blue-500">on calendar</span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => onClearTask(task.id)}
-                    className="ml-2 shrink-0 rounded p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
-                    title="Unassign from this day"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {onRemoveFromCalendar && task.google_event_id && (
+                      <button
+                        onClick={() => onRemoveFromCalendar(task)}
+                        className="rounded p-1 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                        title="Remove from calendar"
+                      >
+                        <CalendarMinus className="h-4 w-4" />
+                      </button>
+                    )}
+                    {onClearTask && (
+                      <button
+                        onClick={() => onClearTask(task.id)}
+                        className="rounded p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                        title="Unassign from this day"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {isToday && (() => {
         const now = new Date();
