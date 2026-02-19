@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSettings } from "@/hooks/use-settings";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
+import { useProjects } from "@/hooks/use-projects";
 import { useRecurringGeneration } from "@/hooks/use-recurring-generation";
 import { DateSelector } from "@/components/daily/date-selector";
 import { DayTimeline } from "@/components/schedule/day-timeline";
@@ -41,6 +42,13 @@ export default function SchedulePage() {
   );
 
   const { recurringTasks } = useRecurringTasks();
+  const { projects } = useProjects();
+
+  const projectMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of projects) map[p.id] = p.name;
+    return map;
+  }, [projects]);
 
   const fetchAllTasks = useCallback(async () => {
     const { data } = await supabase.from("tasks").select("*").order("created_at");
@@ -212,6 +220,7 @@ export default function SchedulePage() {
           workStart={settings.working_hours_start}
           workEnd={settings.working_hours_end}
           isToday={selectedDate === today}
+          projectMap={projectMap}
         />
       )}
 

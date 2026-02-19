@@ -14,6 +14,7 @@ interface DayTimelineProps {
   workStart: string;
   workEnd: string;
   isToday?: boolean;
+  projectMap?: Record<string, string>;
 }
 
 function timeToMinutes(time: string): number {
@@ -51,6 +52,7 @@ interface TimeBlock {
   endMin: number;
   durationMinutes: number;
   color?: string;
+  projectName?: string;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -73,6 +75,7 @@ export function DayTimeline({
   workStart,
   workEnd,
   isToday = false,
+  projectMap = {},
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
@@ -149,6 +152,7 @@ export function DayTimeline({
             startMin: gapCursor,
             endMin: gapCursor + dur,
             durationMinutes: dur,
+            projectName: task.project_id ? projectMap[task.project_id] : undefined,
           });
           gapCursor += dur;
           placed = true;
@@ -171,7 +175,7 @@ export function DayTimeline({
     );
 
     return { blocks: allBlocks, overflowTasks };
-  }, [events, tasks, date, workStartMin, workEndMin]);
+  }, [events, tasks, date, workStartMin, workEndMin, projectMap]);
 
   return (
     <div className="space-y-4">
@@ -225,6 +229,9 @@ export function DayTimeline({
                           <div className="font-medium">{block.label}</div>
                           <div className="opacity-70">
                             {formatMinutes(block.durationMinutes)}
+                            {block.projectName && (
+                              <span className="ml-1.5">· {block.projectName}</span>
+                            )}
                           </div>
                         </div>
                       );
