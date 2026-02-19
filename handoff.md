@@ -28,7 +28,7 @@
 - Optimistic updates in `use-tasks.ts` and `use-recurring-tasks.ts` (instant UI, rollback on error)
 - Duplicate toast removed from TaskDetailDialog
 
-### 5. Daily digest email feature (NEW)
+### 5. Daily digest email feature
 - **Settings UI**: Daily Digest card on settings page with toggle + city input with Open-Meteo geocoding
 - **Weather utility**: `src/lib/weather.ts` — geocoding + forecast via Open-Meteo (free, no key)
 - **Email template**: `src/emails/daily-digest.tsx` — React Email HTML template with weather, tasks, priority dots
@@ -36,6 +36,18 @@
 - **Supabase admin client**: `src/lib/supabase/admin.ts` — service role key client for cron routes
 - **Vercel cron**: `vercel.json` — fires at 8 AM MST (3 PM UTC) daily
 - **Database migration**: `005_digest_settings.sql` — added `digest_enabled`, `digest_city`, `digest_latitude`, `digest_longitude` to `user_settings`
+
+### 6. Help section (NEW)
+- **Accordion component**: Installed shadcn/ui Accordion (`@radix-ui/react-accordion`)
+- **Navigation**: Added CircleHelp icon to both sidebar nav and bottom nav, linking to `/help`
+- **Help page**: `src/app/(app)/help/page.tsx` — 8 accordion sections covering all features: Getting Started, Today View, Tasks & Backlog, Projects, Recurring Tasks, Daily Digest, Schedule & Calendar, Settings
+
+### 7. Schedule timeline enhancement (NEW)
+- **Auto-stacking**: Tasks now auto-stack into the timeline as green blocks in free time gaps between calendar events (blue blocks), instead of appearing in a separate "Planned Tasks" card
+- **Gap-finding algorithm**: Sorts events by start time, computes free gaps within working hours, places tasks sequentially in earliest available slots
+- **Overflow handling**: If tasks don't fit in the available gaps, shows an amber warning note below the timeline
+- **Work-done state**: After working hours end + 30 minutes on today's view, shows a "You're done for the day!" banner with green styling
+- Files modified: `src/components/schedule/day-timeline.tsx`, `src/app/(app)/schedule/page.tsx`
 
 ## Environment Variables on Vercel
 
