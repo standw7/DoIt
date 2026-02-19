@@ -3,6 +3,11 @@
 import { CreateTaskDialog } from "./create-task-dialog";
 import { TaskInsert, Task, CalendarEvent, RecurringTaskInsert } from "@/lib/types";
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 interface CreateTaskInlineProps {
   projectId?: string;
   day?: string;
@@ -13,6 +18,7 @@ interface CreateTaskInlineProps {
   dailyBudget: number;
   onCreate: (task: TaskInsert) => Promise<void>;
   onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
+  projects?: ProjectOption[];
 }
 
 export function CreateTaskInline(props: CreateTaskInlineProps) {

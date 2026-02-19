@@ -11,6 +11,11 @@ import { Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 interface TaskCardProps {
   task: Task;
   onToggleDone: (task: Task) => void;
@@ -18,6 +23,7 @@ interface TaskCardProps {
   onDelete: (id: string) => void;
   onAssignToDay?: (taskId: string) => void;
   onUnschedule?: (task: Task) => void;
+  projects?: ProjectOption[];
 }
 
 const priorityColors: Record<string, string> = {
@@ -26,7 +32,7 @@ const priorityColors: Record<string, string> = {
   low: "text-blue-500",
 };
 
-export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay, onUnschedule }: TaskCardProps) {
+export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay, onUnschedule, projects }: TaskCardProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const isDone = task.status === "done";
 
@@ -94,6 +100,7 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
         onOpenChange={setDetailOpen}
         onUpdate={onUpdate}
         onDelete={onDelete}
+        projects={projects}
       />
     </>
   );

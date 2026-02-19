@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/hooks/use-tasks";
 import { useSettings } from "@/hooks/use-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
+import { useProjects } from "@/hooks/use-projects";
 import { Task } from "@/lib/types";
 import { DateSelector } from "@/components/daily/date-selector";
 import { SuggestedTasks } from "@/components/daily/suggested-tasks";
@@ -29,6 +30,7 @@ function TodayContent() {
   const supabase = supabaseRef.current;
 
   const { settings } = useSettings();
+  const { projects } = useProjects();
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const futureStr = format(addDays(new Date(), 14), "yyyy-MM-dd");
@@ -95,6 +97,7 @@ function TodayContent() {
           workingHoursStart={settings.working_hours_start}
           workingHoursEnd={settings.working_hours_end}
           dailyBudget={settings.daily_minutes_budget}
+          projects={projects}
         />
       </div>
 
@@ -113,7 +116,7 @@ function TodayContent() {
               </h2>
               <div className="space-y-2">
                 {plannedTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
+                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
                 ))}
               </div>
             </section>
@@ -129,7 +132,7 @@ function TodayContent() {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 mt-2">
                 {doneTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
+                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
                 ))}
               </CollapsibleContent>
             </Collapsible>

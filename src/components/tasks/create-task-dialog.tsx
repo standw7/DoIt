@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ChevronDown } from "lucide-react";
 import { TaskInsert, TaskPriority, Task, CalendarEvent, RecurringTaskInsert, DAY_NAMES } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -14,6 +15,11 @@ import { pickBestDay } from "@/lib/scheduler";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+
+interface ProjectOption {
+  id: string;
+  name: string;
+}
 
 interface CreateTaskDialogProps {
   projectId?: string;
@@ -25,6 +31,7 @@ interface CreateTaskDialogProps {
   dailyBudget: number;
   onCreate: (task: TaskInsert) => Promise<void>;
   onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
+  projects?: ProjectOption[];
 }
 
 const TIME_PRESETS = [
@@ -45,6 +52,7 @@ export function CreateTaskDialog({
   dailyBudget,
   onCreate,
   onCreateRecurring,
+  projects,
 }: CreateTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -58,6 +66,7 @@ export function CreateTaskDialog({
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
   const [endDate, setEndDate] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("none");
 
   function reset() {
     setName("");
@@ -71,12 +80,15 @@ export function CreateTaskDialog({
     setIsRecurring(false);
     setRecurrenceDay(0);
     setEndDate("");
+    setSelectedProjectId("none");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const minutes = customMinutes ? parseInt(customMinutes) : estimatedMinutes;
     if (!name.trim() || !minutes) return;
+
+    const effectiveProjectId = projectId ?? (selectedProjectId !== "none" ? selectedProjectId : null);
 
     if (isRecurring && onCreateRecurring) {
       try {
@@ -85,7 +97,7 @@ export function CreateTaskDialog({
           description: description.trim() || null,
           estimated_minutes: minutes,
           priority,
-          project_id: projectId ?? null,
+          project_id: effectiveProjectId,
           recurrence_day: recurrenceDay,
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
@@ -120,7 +132,7 @@ export function CreateTaskDialog({
     try {
       await onCreate({
         name: name.trim(),
-        project_id: projectId ?? null,
+        project_id: effectiveProjectId,
         day: assignedDay,
         status: "planned",
         priority,
@@ -281,6 +293,21 @@ export function CreateTaskDialog({
                 value={day}
                 onChange={(e) => setDay(e.target.value)}
               />
+            </div>
+          )}
+
+          {!projectId && projects && projects.length > 0 && (
+            <div>
+              <Label>Project (optional)</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No project</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

@@ -9,21 +9,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Task, TaskPriority } from "@/lib/types";
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 interface TaskDetailDialogProps {
   task: Task;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
+  projects?: ProjectOption[];
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete, projects }: TaskDetailDialogProps) {
   const [name, setName] = useState(task.name);
   const [description, setDescription] = useState(task.description ?? "");
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [estimatedMinutes, setEstimatedMinutes] = useState(task.estimated_minutes?.toString() ?? "");
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
   const [day, setDay] = useState(task.day ?? "");
+  const [projectId, setProjectId] = useState(task.project_id ?? "none");
 
   useEffect(() => {
     setName(task.name);
@@ -32,6 +39,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete 
     setEstimatedMinutes(task.estimated_minutes?.toString() ?? "");
     setDueDate(task.due_date ?? "");
     setDay(task.day ?? "");
+    setProjectId(task.project_id ?? "none");
   }, [task]);
 
   function handleSave() {
@@ -42,6 +50,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete 
       estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes) : null,
       due_date: dueDate || null,
       day: day || null,
+      project_id: projectId === "none" ? null : projectId,
       status: day && task.status === "backlog" ? "planned" : task.status,
     });
     onOpenChange(false);
@@ -89,6 +98,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete 
               <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
             </div>
           </div>
+          {projects && projects.length > 0 && (
+            <div>
+              <Label>Project</Label>
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No project</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button onClick={handleSave} className="flex-1">Save</Button>
             <Button variant="destructive" onClick={() => { onDelete(task.id); onOpenChange(false); }}>Delete</Button>

@@ -92,7 +92,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Backlog ({backlogTasks.length})</h2>
           <div className="space-y-2">
             {backlogTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
             ))}
           </div>
         </section>
@@ -103,7 +103,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Planned ({plannedTasks.length})</h2>
           <div className="space-y-2">
             {plannedTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
             ))}
           </div>
         </section>
@@ -114,7 +114,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Done ({doneTasks.length})</h2>
           <div className="space-y-2">
             {doneTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
             ))}
           </div>
         </section>
