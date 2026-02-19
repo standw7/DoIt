@@ -6,7 +6,8 @@ export async function getCalendarEvents(
   accessToken: string,
   calendarId: string,
   timeMin: string,
-  timeMax: string
+  timeMax: string,
+  calendarColor?: string
 ): Promise<CalendarEvent[]> {
   const params = new URLSearchParams({
     timeMin: new Date(timeMin).toISOString(),
@@ -33,14 +34,22 @@ export async function getCalendarEvents(
     start: item.start?.dateTime ?? item.start?.date ?? "",
     end: item.end?.dateTime ?? item.end?.date ?? "",
     allDay: !!item.start?.date && !item.start?.dateTime,
+    color: calendarColor,
   }));
+}
+
+interface CalendarListItem {
+  id: string;
+  summary: string;
+  selected: boolean;
+  backgroundColor: string;
 }
 
 export async function listCalendars(
   accessToken: string
-): Promise<{ id: string; summary: string }[]> {
+): Promise<CalendarListItem[]> {
   const res = await fetch(
-    `${CALENDAR_API}/users/me/calendarList?minAccessRole=reader`,
+    `${CALENDAR_API}/users/me/calendarList`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
@@ -52,6 +61,8 @@ export async function listCalendars(
   return (data.items ?? []).map((item: any) => ({
     id: item.id,
     summary: item.summary ?? "(No title)",
+    selected: item.selected ?? false,
+    backgroundColor: item.backgroundColor ?? "#4285f4",
   }));
 }
 
@@ -61,12 +72,18 @@ export async function getAllCalendarEvents(
   timeMax: string
 ): Promise<CalendarEvent[]> {
   const calendars = await listCalendars(accessToken);
+
+  // Only fetch from calendars the user has visible in Google Calendar
+  const visible = calendars.filter((cal) => cal.selected);
+
   const seen = new Set<string>();
   const allEvents: CalendarEvent[] = [];
 
-  // Fetch events from all calendars in parallel
+  // Fetch events from visible calendars in parallel, tagging with calendar color
   const results = await Promise.allSettled(
-    calendars.map((cal) => getCalendarEvents(accessToken, cal.id, timeMin, timeMax))
+    visible.map((cal) =>
+      getCalendarEvents(accessToken, cal.id, timeMin, timeMax, cal.backgroundColor)
+    )
   );
 
   for (const result of results) {

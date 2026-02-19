@@ -72,6 +72,7 @@ export interface CalendarEvent {
   start: string;
   end: string;
   allDay: boolean;
+  color?: string;
 }
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;

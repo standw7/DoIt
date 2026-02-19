@@ -50,6 +50,20 @@ interface TimeBlock {
   startMin: number;
   endMin: number;
   durationMinutes: number;
+  color?: string;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const match = hex.replace("#", "").match(/.{2}/g);
+  if (!match || match.length < 3) return null;
+  return { r: parseInt(match[0], 16), g: parseInt(match[1], 16), b: parseInt(match[2], 16) };
+}
+
+function getContrastColor(hex: string): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return "#1f2937";
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.5 ? "#1f2937" : "#ffffff";
 }
 
 export function DayTimeline({
@@ -86,6 +100,7 @@ export function DayTimeline({
         startMin: range.startMin,
         endMin: range.endMin,
         durationMinutes: range.endMin - range.startMin,
+        color: event.color,
       });
     }
 
@@ -186,17 +201,25 @@ export function DayTimeline({
                         block.durationMinutes / 60,
                         4
                       );
+                      const useCalendarColor = block.type === "event" && block.color;
                       return (
                         <div
                           key={block.id}
                           className={cn(
                             "mb-1 rounded-md px-3 py-1.5 text-xs",
-                            block.type === "event"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
-                              : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                            !useCalendarColor && block.type === "event" &&
+                              "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
+                            block.type === "task" &&
+                              "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
                           )}
                           style={{
                             minHeight: `${Math.max(heightRatio * 3, 1.75)}rem`,
+                            ...(useCalendarColor
+                              ? {
+                                  backgroundColor: block.color,
+                                  color: getContrastColor(block.color!),
+                                }
+                              : {}),
                           }}
                         >
                           <div className="font-medium">{block.label}</div>
