@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateTaskDialog } from "./create-task-dialog";
-import { TaskInsert, Task, CalendarEvent } from "@/lib/types";
+import { TaskInsert, Task, CalendarEvent, RecurringTaskInsert } from "@/lib/types";
 
 interface CreateTaskInlineProps {
   projectId?: string;
@@ -12,6 +12,7 @@ interface CreateTaskInlineProps {
   workingHoursEnd: string;
   dailyBudget: number;
   onCreate: (task: TaskInsert) => Promise<void>;
+  onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
 }
 
 export function CreateTaskInline(props: CreateTaskInlineProps) {

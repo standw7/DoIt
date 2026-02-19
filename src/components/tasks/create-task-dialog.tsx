@@ -6,12 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Plus, ChevronDown } from "lucide-react";
-import { TaskInsert, TaskPriority, Task, CalendarEvent } from "@/lib/types";
+import { TaskInsert, TaskPriority, Task, CalendarEvent, RecurringTaskInsert, DAY_NAMES } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { pickBestDay } from "@/lib/scheduler";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface CreateTaskDialogProps {
   projectId?: string;
@@ -22,6 +24,7 @@ interface CreateTaskDialogProps {
   workingHoursEnd: string;
   dailyBudget: number;
   onCreate: (task: TaskInsert) => Promise<void>;
+  onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
 }
 
 const TIME_PRESETS = [
@@ -41,6 +44,7 @@ export function CreateTaskDialog({
   workingHoursEnd,
   dailyBudget,
   onCreate,
+  onCreateRecurring,
 }: CreateTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -51,6 +55,9 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [description, setDescription] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
+  const [endDate, setEndDate] = useState("");
 
   function reset() {
     setName("");
@@ -61,12 +68,39 @@ export function CreateTaskDialog({
     setPriority("medium");
     setDescription("");
     setShowDetails(false);
+    setIsRecurring(false);
+    setRecurrenceDay(0);
+    setEndDate("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const minutes = customMinutes ? parseInt(customMinutes) : estimatedMinutes;
-    if (!name.trim() || !dueDate || !minutes) return;
+    if (!name.trim() || !minutes) return;
+
+    if (isRecurring && onCreateRecurring) {
+      try {
+        await onCreateRecurring({
+          name: name.trim(),
+          description: description.trim() || null,
+          estimated_minutes: minutes,
+          priority,
+          project_id: projectId ?? null,
+          recurrence_day: recurrenceDay,
+          start_date: format(new Date(), "yyyy-MM-dd"),
+          end_date: endDate || null,
+          active: true,
+        });
+        reset();
+        setOpen(false);
+        toast.success(`Recurring task created — every ${DAY_NAMES[recurrenceDay]}`);
+      } catch {
+        toast.error("Failed to create recurring task");
+      }
+      return;
+    }
+
+    if (!dueDate) return;
 
     let assignedDay = day || null;
     let autoAssigned = false;
@@ -133,15 +167,61 @@ export function CreateTaskDialog({
             />
           </div>
 
-          <div>
-            <Label>Due date *</Label>
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              required
-            />
-          </div>
+          {onCreateRecurring && (
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={isRecurring}
+                onCheckedChange={setIsRecurring}
+                id="recurring-toggle"
+              />
+              <Label htmlFor="recurring-toggle" className="cursor-pointer">
+                Make recurring
+              </Label>
+            </div>
+          )}
+
+          {isRecurring ? (
+            <>
+              <div>
+                <Label>Repeats every *</Label>
+                <div className="flex gap-1.5 flex-wrap mt-1">
+                  {DAY_NAMES.map((dayName, i) => (
+                    <Button
+                      key={i}
+                      type="button"
+                      variant={recurrenceDay === i ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRecurrenceDay(i)}
+                      className="px-2.5"
+                    >
+                      {dayName.slice(0, 3)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label>End date (optional)</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave blank to repeat indefinitely
+                </p>
+              </div>
+            </>
+          ) : (
+            <div>
+              <Label>Due date *</Label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div>
             <Label>Estimated time *</Label>
@@ -193,14 +273,16 @@ export function CreateTaskDialog({
             </div>
           </div>
 
-          <div>
-            <Label>Schedule for day (leave blank for auto-assign)</Label>
-            <Input
-              type="date"
-              value={day}
-              onChange={(e) => setDay(e.target.value)}
-            />
-          </div>
+          {!isRecurring && (
+            <div>
+              <Label>Schedule for day (leave blank for auto-assign)</Label>
+              <Input
+                type="date"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+              />
+            </div>
+          )}
 
           <Collapsible open={showDetails} onOpenChange={setShowDetails}>
             <CollapsibleTrigger asChild>
@@ -219,8 +301,16 @@ export function CreateTaskDialog({
             </CollapsibleContent>
           </Collapsible>
 
-          <Button type="submit" className="w-full" disabled={!name.trim() || !dueDate || !minutes}>
-            {day ? "Create Task" : "Create & Auto-Assign"}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={!name.trim() || !minutes || (!isRecurring && !dueDate)}
+          >
+            {isRecurring
+              ? "Create Recurring Task"
+              : day
+                ? "Create Task"
+                : "Create & Auto-Assign"}
           </Button>
         </form>
       </DialogContent>

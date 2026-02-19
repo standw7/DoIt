@@ -5,6 +5,7 @@ import { useTasks } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useSettings } from "@/hooks/use-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
+import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
 import { TaskCard } from "@/components/tasks/task-card";
 import { CreateTaskInline } from "@/components/tasks/create-task-inline";
 import { ProgressBar } from "@/components/projects/progress-bar";
@@ -24,6 +25,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const futureStr = format(addDays(new Date(), 14), "yyyy-MM-dd");
   const { events: calendarEvents } = useCalendarEvents(todayStr, futureStr);
+  const { createRecurringTask } = useRecurringTasks();
 
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const supabaseRef = useRef(createClient());
@@ -61,6 +63,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       <CreateTaskInline
         projectId={id}
         onCreate={createTask}
+        onCreateRecurring={createRecurringTask}
         existingTasks={allTasks}
         calendarEvents={calendarEvents}
         workingHoursStart={settings.working_hours_start}
