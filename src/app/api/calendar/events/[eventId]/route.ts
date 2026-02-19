@@ -1,29 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiClient } from "@/lib/supabase/api";
 import { deleteCalendarEvent, updateCalendarEvent } from "@/lib/google-calendar";
-
-async function getSessionWithToken() {
-  const supabase = await createApiClient();
-  let { data: { session } } = await supabase.auth.getSession();
-
-  if (session && !session.provider_token) {
-    const { data: refreshed } = await supabase.auth.refreshSession();
-    if (refreshed.session?.provider_token) {
-      session = refreshed.session;
-    }
-  }
-
-  return { supabase, session };
-}
+import { getGoogleAccessToken } from "@/lib/google-auth";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
-  const { supabase, session } = await getSessionWithToken();
+  const supabase = await createApiClient();
+  const accessToken = await getGoogleAccessToken(supabase);
 
-  if (!session?.provider_token) {
+  if (!accessToken) {
     return NextResponse.json({ error: "Google calendar token expired" }, { status: 401 });
   }
 
@@ -39,7 +27,7 @@ export async function PATCH(
   const body = await request.json();
   try {
     await updateCalendarEvent(
-      session.provider_token,
+      accessToken,
       settings.doit_calendar_id,
       eventId,
       { startDateTime: body.startDateTime, endDateTime: body.endDateTime }
@@ -55,9 +43,10 @@ export async function DELETE(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
-  const { supabase, session } = await getSessionWithToken();
+  const supabase = await createApiClient();
+  const accessToken = await getGoogleAccessToken(supabase);
 
-  if (!session?.provider_token) {
+  if (!accessToken) {
     return NextResponse.json({ error: "Google calendar token expired" }, { status: 401 });
   }
 
@@ -71,7 +60,7 @@ export async function DELETE(
   }
 
   try {
-    await deleteCalendarEvent(session.provider_token, settings.doit_calendar_id, eventId);
+    await deleteCalendarEvent(accessToken, settings.doit_calendar_id, eventId);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

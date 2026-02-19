@@ -59,6 +59,7 @@ export interface UserSettings {
   digest_city: string | null;
   digest_latitude: number | null;
   digest_longitude: number | null;
+  google_refresh_token: string | null;
   created_at: string;
   updated_at: string;
 }

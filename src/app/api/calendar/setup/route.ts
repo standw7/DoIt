@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createApiClient } from "@/lib/supabase/api";
 import { createDoItCalendar } from "@/lib/google-calendar";
+import { getGoogleAccessToken } from "@/lib/google-auth";
 
 export async function POST() {
   const supabase = await createApiClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const accessToken = await getGoogleAccessToken(supabase);
 
-  if (!session?.provider_token) {
+  if (!accessToken) {
     return NextResponse.json(
       { error: "No Google token — please sign out and sign back in to grant calendar access" },
       { status: 401 }
@@ -14,7 +15,7 @@ export async function POST() {
   }
 
   try {
-    const calendarId = await createDoItCalendar(session.provider_token);
+    const calendarId = await createDoItCalendar(accessToken);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "No user" }, { status: 401 });

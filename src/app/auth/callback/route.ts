@@ -10,6 +10,15 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Grab the session to capture the Google refresh token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.provider_refresh_token) {
+        // Store the Google refresh token so we can refresh access tokens later
+        await supabase
+          .from("user_settings")
+          .update({ google_refresh_token: session.provider_refresh_token })
+          .eq("user_id", session.user.id);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
