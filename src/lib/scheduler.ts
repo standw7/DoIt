@@ -132,10 +132,10 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     }
 
     const total =
-      budgetScore * 0.30 +
-      spreadScore * 0.25 +
-      capacityScore * 0.25 +
-      urgencyScore * 0.20;
+      budgetScore * 0.35 +
+      capacityScore * 0.30 +
+      urgencyScore * 0.20 +
+      spreadScore * 0.15;
 
     scores.push({
       date: dateStr,

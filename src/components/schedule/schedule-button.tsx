@@ -161,11 +161,20 @@ export function ScheduleButton({
       const workEndMin = timeToMinutes(workEnd);
 
       const freeSlots = getFreeSlots(events, date, workStartMin, workEndMin);
-      freeSlots.sort((a, b) => b.durationMin - a.durationMin);
+      // Keep slots in chronological order — fill earliest gaps first
+      freeSlots.sort((a, b) => a.startMin - b.startMin);
 
-      const sortedTasks = [...unscheduledTasks].sort(
-        (a, b) => (b.estimated_minutes ?? 0) - (a.estimated_minutes ?? 0)
-      );
+      // Sort tasks by priority (high first) then due date (earliest first)
+      const sortedTasks = [...unscheduledTasks].sort((a, b) => {
+        const pOrder = { high: 0, medium: 1, low: 2 };
+        const pa = pOrder[a.priority] ?? 1;
+        const pb = pOrder[b.priority] ?? 1;
+        if (pa !== pb) return pa - pb;
+        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+        if (a.due_date) return -1;
+        if (b.due_date) return 1;
+        return 0;
+      });
 
       let scheduled = 0;
       let skipped = 0;
