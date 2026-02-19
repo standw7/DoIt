@@ -4,10 +4,21 @@ import { getAllCalendarEvents, createCalendarEvent } from "@/lib/google-calendar
 
 export async function GET(request: NextRequest) {
   const supabase = await createApiClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  let { data: { session } } = await supabase.auth.getSession();
+
+  // If provider_token is missing, try refreshing the session to get a new one
+  if (session && !session.provider_token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed.session?.provider_token) {
+      session = refreshed.session;
+    }
+  }
 
   if (!session?.provider_token) {
-    return NextResponse.json({ error: "Not authenticated or no calendar access" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Google calendar token expired. Please sign out and sign back in." },
+      { status: 401 }
+    );
   }
 
   const { searchParams } = new URL(request.url);
@@ -34,10 +45,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const supabase = await createApiClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  let { data: { session } } = await supabase.auth.getSession();
+
+  if (session && !session.provider_token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed.session?.provider_token) {
+      session = refreshed.session;
+    }
+  }
 
   if (!session?.provider_token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Google calendar token expired. Please sign out and sign back in." }, { status: 401 });
   }
 
   const { data: settings } = await supabase

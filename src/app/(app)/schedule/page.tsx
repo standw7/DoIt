@@ -15,7 +15,7 @@ import { todayString, formatMinutes } from "@/lib/utils";
 import { getDayCapacity, pickBestDay } from "@/lib/scheduler";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Wand2 } from "lucide-react";
+import { AlertCircle, Loader2, Wand2 } from "lucide-react";
 import { Task } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ export default function SchedulePage() {
   } = useSettings();
 
   const { tasks, loading: tasksLoading, updateTask } = useTasks({ day: selectedDate });
-  const { events, loading: eventsLoading, refetch: refetchEvents } = useCalendarEvents(
+  const { events, loading: eventsLoading, error: calendarError, refetch: refetchEvents } = useCalendarEvents(
     selectedDate,
     selectedDate
   );
@@ -170,6 +170,14 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* Calendar error */}
+      {calendarError && (
+        <div className="flex items-center gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {calendarError}
+        </div>
+      )}
 
       {/* Auto-assign unassigned tasks */}
       {unassignedTasks.length > 0 && (

@@ -2,16 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApiClient } from "@/lib/supabase/api";
 import { deleteCalendarEvent, updateCalendarEvent } from "@/lib/google-calendar";
 
+async function getSessionWithToken() {
+  const supabase = await createApiClient();
+  let { data: { session } } = await supabase.auth.getSession();
+
+  if (session && !session.provider_token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed.session?.provider_token) {
+      session = refreshed.session;
+    }
+  }
+
+  return { supabase, session };
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
-  const supabase = await createApiClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { supabase, session } = await getSessionWithToken();
 
   if (!session?.provider_token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Google calendar token expired" }, { status: 401 });
   }
 
   const { data: settings } = await supabase
@@ -42,11 +55,10 @@ export async function DELETE(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
-  const supabase = await createApiClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { supabase, session } = await getSessionWithToken();
 
   if (!session?.provider_token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Google calendar token expired" }, { status: 401 });
   }
 
   const { data: settings } = await supabase
