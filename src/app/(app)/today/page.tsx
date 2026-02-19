@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { todayString, getSuggestedTasks } from "@/lib/utils";
 import { format, addDays } from "date-fns";
+import { toast } from "sonner";
 
 function TodayContent() {
   const searchParams = useSearchParams();
@@ -60,7 +61,20 @@ function TodayContent() {
     router.push(`/today?date=${newDate}`);
   }
 
-  const plannedTasks = tasks.filter((t) => t.status === "planned" || t.status === "scheduled");
+  async function handleUnschedule(task: Task) {
+    if (!task.google_event_id) return;
+    try {
+      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
+      toast.success("Removed from calendar");
+    } catch {
+      toast.error("Failed to remove from calendar");
+    }
+  }
+
+  const plannedTasks = tasks
+    .filter((t) => t.status === "planned" || t.status === "scheduled")
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
   const doneTasks = tasks.filter((t) => t.status === "done");
   const suggested = getSuggestedTasks(allBacklogTasks, date);
 
@@ -99,7 +113,7 @@ function TodayContent() {
               </h2>
               <div className="space-y-2">
                 {plannedTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} />
+                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
                 ))}
               </div>
             </section>
@@ -115,7 +129,7 @@ function TodayContent() {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 mt-2">
                 {doneTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} />
+                  <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
                 ))}
               </CollapsibleContent>
             </Collapsible>

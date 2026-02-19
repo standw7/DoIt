@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Task } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { format, addDays } from "date-fns";
+import { toast } from "sonner";
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -40,8 +41,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const project = projects.find((p) => p.id === id);
 
-  const backlogTasks = tasks.filter((t) => t.status === "backlog");
-  const plannedTasks = tasks.filter((t) => t.status === "planned" || t.status === "scheduled");
+  async function handleUnschedule(task: Task) {
+    if (!task.google_event_id) return;
+    try {
+      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
+      toast.success("Removed from calendar");
+    } catch {
+      toast.error("Failed to remove from calendar");
+    }
+  }
+
+  const backlogTasks = tasks
+    .filter((t) => t.status === "backlog")
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  const plannedTasks = tasks
+    .filter((t) => t.status === "planned" || t.status === "scheduled")
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
   const doneTasks = tasks.filter((t) => t.status === "done");
 
   if (loading) {
@@ -76,7 +92,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Backlog ({backlogTasks.length})</h2>
           <div className="space-y-2">
             {backlogTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
             ))}
           </div>
         </section>
@@ -87,7 +103,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Planned ({plannedTasks.length})</h2>
           <div className="space-y-2">
             {plannedTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
             ))}
           </div>
         </section>
@@ -98,7 +114,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <h2 className="text-sm font-semibold text-muted-foreground mb-2">Done ({doneTasks.length})</h2>
           <div className="space-y-2">
             {doneTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} />
+              <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} />
             ))}
           </div>
         </section>

@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, CalendarPlus, Pencil } from "lucide-react";
+import { MoreHorizontal, Trash2, CalendarPlus, CalendarMinus, Pencil } from "lucide-react";
 import { Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
@@ -17,6 +17,7 @@ interface TaskCardProps {
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onAssignToDay?: (taskId: string) => void;
+  onUnschedule?: (task: Task) => void;
 }
 
 const priorityColors: Record<string, string> = {
@@ -25,7 +26,7 @@ const priorityColors: Record<string, string> = {
   low: "text-blue-500",
 };
 
-export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay }: TaskCardProps) {
+export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay, onUnschedule }: TaskCardProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const isDone = task.status === "done";
 
@@ -74,6 +75,11 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
             {onAssignToDay && (
               <DropdownMenuItem onClick={() => onAssignToDay(task.id)}>
                 <CalendarPlus className="h-4 w-4 mr-2" /> Add to today
+              </DropdownMenuItem>
+            )}
+            {onUnschedule && task.google_event_id && (
+              <DropdownMenuItem onClick={() => onUnschedule(task)}>
+                <CalendarMinus className="h-4 w-4 mr-2" /> Remove from calendar
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
