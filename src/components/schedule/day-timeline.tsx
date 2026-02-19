@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, CalendarDays, AlertCircle } from "lucide-react";
+import { Clock, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 interface DayTimelineProps {
@@ -13,6 +13,7 @@ interface DayTimelineProps {
   tasks: Task[];
   workStart: string;
   workEnd: string;
+  isToday?: boolean;
 }
 
 function timeToMinutes(time: string): number {
@@ -57,6 +58,7 @@ export function DayTimeline({
   tasks,
   workStart,
   workEnd,
+  isToday = false,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
@@ -223,6 +225,17 @@ export function DayTimeline({
           </div>
         </CardContent>
       </Card>
+
+      {isToday && (() => {
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        return nowMin >= workEndMin + 30;
+      })() && (
+        <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          You&apos;re done for the day!
+        </div>
+      )}
 
       {overflowTasks.length > 0 && (
         <div className="flex items-center gap-2 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">

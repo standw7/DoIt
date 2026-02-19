@@ -200,6 +200,7 @@ export default function SchedulePage() {
           tasks={tasks}
           workStart={settings.working_hours_start}
           workEnd={settings.working_hours_end}
+          isToday={selectedDate === today}
         />
       )}
 
