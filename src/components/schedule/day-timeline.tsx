@@ -2,10 +2,9 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, CalendarDays, ListTodo } from "lucide-react";
+import { Clock, CalendarDays, AlertCircle } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 interface DayTimelineProps {
@@ -72,13 +71,13 @@ export function DayTimeline({
     return result;
   }, [workStartMin, workEndMin]);
 
-  const { blocks, unscheduledTasks } = useMemo(() => {
-    const blocks: TimeBlock[] = [];
-
+  const { blocks, overflowTasks } = useMemo(() => {
+    // Build event blocks
+    const eventBlocks: TimeBlock[] = [];
     for (const event of events) {
       const range = eventToTimeRange(event, date, workEndMin);
       if (!range) continue;
-      blocks.push({
+      eventBlocks.push({
         type: "event",
         id: event.id,
         label: event.summary,
@@ -88,17 +87,76 @@ export function DayTimeline({
       });
     }
 
-    const unscheduledTasks = tasks.filter(
+    // Collect unscheduled tasks to auto-stack
+    const unscheduled = tasks.filter(
       (t) =>
         t.status === "planned" &&
         !t.google_event_id &&
         t.estimated_minutes
     );
 
-    return { blocks, unscheduledTasks };
-  }, [events, tasks, date, workEndMin]);
+    // Sort events by start time to find gaps
+    const sorted = [...eventBlocks].sort((a, b) => a.startMin - b.startMin);
 
-  const hasContent = blocks.length > 0 || unscheduledTasks.length > 0;
+    // Build list of free gaps within working hours
+    const gaps: { start: number; end: number }[] = [];
+    let cursor = workStartMin;
+    for (const block of sorted) {
+      if (block.startMin > cursor) {
+        gaps.push({ start: cursor, end: block.startMin });
+      }
+      cursor = Math.max(cursor, block.endMin);
+    }
+    if (cursor < workEndMin) {
+      gaps.push({ start: cursor, end: workEndMin });
+    }
+
+    // Place tasks into gaps
+    const taskBlocks: TimeBlock[] = [];
+    const overflowTasks: Task[] = [];
+    let gapIdx = 0;
+    let gapCursor = gaps.length > 0 ? gaps[0].start : workEndMin;
+
+    for (const task of unscheduled) {
+      const dur = task.estimated_minutes!;
+      let placed = false;
+
+      while (gapIdx < gaps.length) {
+        const gap = gaps[gapIdx];
+        const available = gap.end - gapCursor;
+        if (dur <= available) {
+          taskBlocks.push({
+            type: "task",
+            id: task.id,
+            label: task.name,
+            startMin: gapCursor,
+            endMin: gapCursor + dur,
+            durationMinutes: dur,
+          });
+          gapCursor += dur;
+          placed = true;
+          break;
+        }
+        // Move to next gap
+        gapIdx++;
+        if (gapIdx < gaps.length) {
+          gapCursor = gaps[gapIdx].start;
+        }
+      }
+
+      if (!placed) {
+        overflowTasks.push(task);
+      }
+    }
+
+    const allBlocks = [...eventBlocks, ...taskBlocks].sort(
+      (a, b) => a.startMin - b.startMin
+    );
+
+    return { blocks: allBlocks, overflowTasks };
+  }, [events, tasks, date, workStartMin, workEndMin]);
+
+  const hasContent = blocks.length > 0 || overflowTasks.length > 0;
 
   if (!hasContent) {
     return (
@@ -166,36 +224,11 @@ export function DayTimeline({
         </CardContent>
       </Card>
 
-      {unscheduledTasks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ListTodo className="h-4 w-4" />
-              Planned Tasks
-              <Badge variant="secondary" className="ml-auto">
-                {unscheduledTasks.length}
-              </Badge>
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Assigned to this day — use &quot;Schedule my day&quot; to add them to Google Calendar
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {unscheduledTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                >
-                  <span>{task.name}</span>
-                  <Badge variant="outline">
-                    {formatMinutes(task.estimated_minutes ?? 0)}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {overflowTasks.length > 0 && (
+        <div className="flex items-center gap-2 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {overflowTasks.length} task{overflowTasks.length > 1 ? "s" : ""} don&apos;t fit in today&apos;s schedule
+        </div>
       )}
     </div>
   );
