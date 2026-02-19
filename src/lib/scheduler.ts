@@ -16,6 +16,7 @@ interface DayScore {
   breakdown: {
     budget: number;
     spread: number;
+    capacity: number;
     urgency: number;
   };
 }
@@ -116,6 +117,12 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       spreadScore = Math.min(100, spreadScore);
     }
 
+    // --- Capacity score (0-100): prefer days with more free time after this task ---
+    const freeAfterTask = Math.max(0, freeMinutes - task.estimated_minutes);
+    const capacityScore = totalWorkAvailable > 0
+      ? (freeAfterTask / totalWorkAvailable) * 100
+      : 0;
+
     // --- Urgency score (0-100): high priority tasks go sooner ---
     let urgencyScore = 50;
     if (task.priority === "high") {
@@ -125,14 +132,15 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     }
 
     const total =
-      budgetScore * 0.40 +
-      spreadScore * 0.40 +
+      budgetScore * 0.30 +
+      spreadScore * 0.25 +
+      capacityScore * 0.25 +
       urgencyScore * 0.20;
 
     scores.push({
       date: dateStr,
       score: total,
-      breakdown: { budget: budgetScore, spread: spreadScore, urgency: urgencyScore },
+      breakdown: { budget: budgetScore, spread: spreadScore, capacity: capacityScore, urgency: urgencyScore },
     });
   }
 
