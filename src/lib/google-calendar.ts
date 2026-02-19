@@ -72,6 +72,30 @@ export async function createCalendarEvent(
   return data.id;
 }
 
+export async function updateCalendarEvent(
+  accessToken: string,
+  calendarId: string,
+  eventId: string,
+  update: { startDateTime: string; endDateTime: string }
+): Promise<void> {
+  const res = await fetch(
+    `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        start: { dateTime: update.startDateTime },
+        end: { dateTime: update.endDateTime },
+      }),
+    }
+  );
+
+  if (!res.ok) throw new Error(`Failed to update event: ${res.status}`);
+}
+
 export async function deleteCalendarEvent(
   accessToken: string,
   calendarId: string,

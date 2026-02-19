@@ -9,6 +9,7 @@ import { useRecurringGeneration } from "@/hooks/use-recurring-generation";
 import { DateSelector } from "@/components/daily/date-selector";
 import { DayTimeline } from "@/components/schedule/day-timeline";
 import { ScheduleButton } from "@/components/schedule/schedule-button";
+import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
 import { getDayCapacity, pickBestDay } from "@/lib/scheduler";
@@ -203,6 +204,18 @@ export default function SchedulePage() {
           workStart={settings.working_hours_start}
           workEnd={settings.working_hours_end}
           isToday={selectedDate === today}
+        />
+      )}
+
+      {/* Conflict detection + reschedule */}
+      {!loading && calendarConnected && (
+        <ConflictReschedule
+          date={selectedDate}
+          tasks={tasks}
+          events={events}
+          workStart={settings.working_hours_start}
+          workEnd={settings.working_hours_end}
+          onRescheduled={refetchEvents}
         />
       )}
 
