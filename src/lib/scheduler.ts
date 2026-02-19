@@ -87,16 +87,16 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       continue;
     }
 
-    // --- Budget score (0-100): prefer days where adding this task stays near the daily budget ---
+    // --- Budget score: prefer days at/under daily budget, hard penalty when over ---
     const taskMinutesAfter = taskMinutes + task.estimated_minutes;
     let budgetScore: number;
     if (taskMinutesAfter <= dailyBudget) {
       // Under or at budget — good. Prefer filling toward the budget (80-100).
       budgetScore = 80 + (taskMinutesAfter / dailyBudget) * 20;
     } else {
-      // Over budget — penalize proportionally
+      // Over budget — severe penalty so any under-budget day always wins
       const overBy = taskMinutesAfter - dailyBudget;
-      budgetScore = Math.max(0, 70 - (overBy / dailyBudget) * 70);
+      budgetScore = -50 - (overBy / dailyBudget) * 50;
     }
 
     // --- Spread score (0-100): strongly prefer earlier days ---
@@ -149,7 +149,7 @@ export function pickBestDayWithInfo(input: SchedulerInput): PickResult {
   if (scores.length > 0) {
     return {
       date: scores[0].date,
-      overBudget: scores[0].breakdown.budget < 70,
+      overBudget: scores[0].breakdown.budget < 0,
     };
   }
 
