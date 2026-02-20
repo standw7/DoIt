@@ -7,6 +7,7 @@ import { formatMinutes, todayString } from "@/lib/utils";
 import { CalendarPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO } from "date-fns";
+import * as api from "@/lib/api";
 
 interface ScheduleButtonProps {
   date: string;
@@ -201,25 +202,15 @@ export function ScheduleButton({
         const endISO = minutesToISO(date, slot.cursor + duration);
 
         try {
-          const res = await fetch("/api/calendar/events", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              summary: task.name,
-              description: task.description ?? undefined,
-              startDateTime: startISO,
-              endDateTime: endISO,
-              taskId: task.id,
-            }),
+          const result = await api.createCalendarEvent({
+            summary: task.name,
+            description: task.description ?? undefined,
+            startDateTime: startISO,
+            endDateTime: endISO,
+            taskId: task.id,
           });
 
-          if (!res.ok) {
-            skipped++;
-            continue;
-          }
-
-          const { eventId } = await res.json();
-          onEventCreated(task.id, eventId);
+          onEventCreated(task.id, result.eventId);
           slot.cursor += duration;
           scheduled++;
         } catch {

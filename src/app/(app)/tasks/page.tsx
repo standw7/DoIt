@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useCallback } from "react";
+import * as api from "@/lib/api";
 import { useSettings } from "@/hooks/use-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
@@ -17,8 +17,6 @@ import { format, parseISO } from "date-fns";
 export default function TasksPage() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
 
   const { settings } = useSettings();
   const { events } = useCalendarEvents(todayString(), todayString());
@@ -31,31 +29,26 @@ export default function TasksPage() {
   } = useRecurringTasks();
 
   const fetchAllTasks = useCallback(async () => {
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setAllTasks((data ?? []) as Task[]);
+    try {
+      const data = await api.getTasks();
+      setAllTasks(data);
+    } catch {
+      // ignore
+    }
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchAllTasks();
-
-    const channel = supabase
-      .channel("tasks-all")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => fetchAllTasks())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchAllTasks, supabase]);
+  }, [fetchAllTasks]);
 
   async function handleCreateTask(task: any) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from("tasks").insert({ ...task, user_id: user.id });
-    if (error) throw error;
-    await fetchAllTasks();
+    try {
+      await api.createTask(task);
+      await fetchAllTasks();
+    } catch {
+      // ignore
+    }
   }
 
   // Split tasks into one-time and recurring

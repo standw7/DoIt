@@ -1,17 +1,46 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
 import { SettingsPanel } from "@/components/schedule/settings-panel";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const handledRef = useRef(false);
+
   const {
     settings,
     loading,
     calendarConnected,
     updateSettings,
     setupCalendar,
+    handleGoogleCallback,
   } = useSettings();
+
+  // Handle Google OAuth callback: ?google=callback&code=...
+  useEffect(() => {
+    const google = searchParams.get("google");
+    const code = searchParams.get("code");
+
+    if (google === "callback" && code && !handledRef.current) {
+      handledRef.current = true;
+
+      handleGoogleCallback(code)
+        .then(() => {
+          toast.success("Google Calendar connected!");
+          // Clean up URL params
+          router.replace("/settings");
+        })
+        .catch((err: any) => {
+          toast.error(err?.detail || "Failed to connect Google Calendar");
+          router.replace("/settings");
+        });
+    }
+  }, [searchParams, handleGoogleCallback, router]);
 
   if (loading) {
     return (
@@ -30,10 +59,6 @@ export default function SettingsPage() {
         dailyBudget={settings.daily_minutes_budget}
         autoAssignEnabled={settings.auto_assign_enabled}
         calendarConnected={calendarConnected}
-        digestEnabled={settings.digest_enabled}
-        digestCity={settings.digest_city}
-        digestLatitude={settings.digest_latitude}
-        digestLongitude={settings.digest_longitude}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}
       />

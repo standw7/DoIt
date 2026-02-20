@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import * as api from "@/lib/api";
 import { UserSettings, UserSettingsUpdate } from "@/lib/types";
 
 const DEFAULT_SETTINGS = {
@@ -10,66 +10,42 @@ const DEFAULT_SETTINGS = {
   daily_minutes_budget: 120,
   auto_assign_enabled: true,
   doit_calendar_id: null as string | null,
-  digest_enabled: false,
-  digest_city: null as string | null,
-  digest_latitude: null as number | null,
-  digest_longitude: null as number | null,
 };
 
 export function useSettings() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
 
   const fetchSettings = useCallback(async () => {
-    const { data } = await supabase
-      .from("user_settings")
-      .select("*")
-      .single();
-
-    if (data) {
-      setSettings(data as UserSettings);
+    try {
+      const data = await api.getSettings();
+      setSettings(data);
+    } catch {
+      // Settings may not exist yet — that's fine
     }
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
 
   async function updateSettings(updates: UserSettingsUpdate) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: existing } = await supabase
-      .from("user_settings")
-      .select("id")
-      .single();
-
-    if (existing) {
-      const { error } = await supabase
-        .from("user_settings")
-        .update(updates)
-        .eq("user_id", user.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("user_settings")
-        .insert({ ...DEFAULT_SETTINGS, ...updates, user_id: user.id });
-      if (error) throw error;
-    }
-
-    await fetchSettings();
+    const data = await api.updateSettings(updates);
+    setSettings(data);
   }
 
   async function setupCalendar() {
-    const res = await fetch("/api/calendar/setup", { method: "POST" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `Setup failed (${res.status})`);
-    }
-    const { calendarId } = await res.json();
+    // Start Google OAuth flow — redirect to Google
+    const { url } = await api.getGoogleAuthUrl();
+    window.location.href = url;
+    return ""; // won't reach here — page redirects
+  }
+
+  async function handleGoogleCallback(code: string) {
+    // Exchange code for tokens, then set up the DoIt calendar
+    await api.exchangeGoogleCode(code);
+    const { calendarId } = await api.setupCalendar();
     await fetchSettings();
     return calendarId;
   }
@@ -82,10 +58,6 @@ export function useSettings() {
     daily_minutes_budget: settings?.daily_minutes_budget ?? DEFAULT_SETTINGS.daily_minutes_budget,
     auto_assign_enabled: settings?.auto_assign_enabled ?? DEFAULT_SETTINGS.auto_assign_enabled,
     doit_calendar_id: settings?.doit_calendar_id ?? null,
-    digest_enabled: settings?.digest_enabled ?? DEFAULT_SETTINGS.digest_enabled,
-    digest_city: settings?.digest_city ?? DEFAULT_SETTINGS.digest_city,
-    digest_latitude: settings?.digest_latitude ?? DEFAULT_SETTINGS.digest_latitude,
-    digest_longitude: settings?.digest_longitude ?? DEFAULT_SETTINGS.digest_longitude,
   };
 
   return {
@@ -94,5 +66,6 @@ export function useSettings() {
     calendarConnected,
     updateSettings,
     setupCalendar,
+    handleGoogleCallback,
   };
 }

@@ -28,7 +28,6 @@ export default function HelpPage() {
           "tasks-backlog",
           "projects",
           "recurring-tasks",
-          "daily-digest",
           "schedule-calendar",
           "settings",
         ]}
@@ -37,7 +36,7 @@ export default function HelpPage() {
           <AccordionTrigger>Getting Started</AccordionTrigger>
           <AccordionContent>
             <p className="text-sm">
-              DoIt is your calm daily task manager. Sign in with Google to get
+              DoIt is your calm daily task manager. Sign up with your email to get
               started. Use the sidebar (desktop) or bottom nav (mobile) to
               navigate between Today, Tasks, Projects, Schedule, and Settings.
             </p>
@@ -95,20 +94,6 @@ export default function HelpPage() {
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="daily-digest">
-          <AccordionTrigger>Daily Digest</AccordionTrigger>
-          <AccordionContent>
-            <p className="text-sm">
-              Receive a morning email summarizing your tasks for the day along
-              with a weather forecast. Enable it in Settings under
-              &ldquo;Daily Digest&rdquo;. Enter your city name and click Verify
-              to confirm location. Emails are sent at 8 AM MST daily and include
-              task names, priorities, time estimates, and current weather
-              conditions.
-            </p>
-          </AccordionContent>
-        </AccordionItem>
-
         <AccordionItem value="schedule-calendar">
           <AccordionTrigger>Schedule &amp; Calendar</AccordionTrigger>
           <AccordionContent>
@@ -130,8 +115,7 @@ export default function HelpPage() {
             <p className="text-sm">
               Configure your experience: set working hours (start and end times),
               daily task time budget in minutes, connect or disconnect Google
-              Calendar, manage recurring tasks, and enable the daily digest email
-              with weather for your city.
+              Calendar, and manage recurring tasks.
             </p>
           </AccordionContent>
         </AccordionItem>

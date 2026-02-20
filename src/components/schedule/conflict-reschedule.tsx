@@ -6,6 +6,7 @@ import { CalendarEvent, Task } from "@/lib/types";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO } from "date-fns";
+import * as api from "@/lib/api";
 
 interface ConflictRescheduleProps {
   date: string;
@@ -162,22 +163,14 @@ export function ConflictReschedule({
           const newEndISO = minutesToISO(date, slot.cursor + duration);
 
           try {
-            const res = await fetch(`/api/calendar/events/${taskEvent.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                startDateTime: newStartISO,
-                endDateTime: newEndISO,
-              }),
+            await api.updateCalendarEvent(taskEvent.id, {
+              startDateTime: newStartISO,
+              endDateTime: newEndISO,
             });
 
-            if (res.ok) {
-              slot.cursor += duration;
-              rescheduled++;
-              placed = true;
-            } else {
-              failed++;
-            }
+            slot.cursor += duration;
+            rescheduled++;
+            placed = true;
           } catch {
             failed++;
           }

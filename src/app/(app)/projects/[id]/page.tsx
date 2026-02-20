@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useRef } from "react";
+import { use, useState, useEffect } from "react";
 import { useTasks } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useSettings } from "@/hooks/use-settings";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Task } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
+import * as api from "@/lib/api";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 
@@ -29,12 +29,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { createRecurringTask } = useRecurringTasks();
 
   const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const supabaseRef = useRef(createClient());
 
   useEffect(() => {
     async function fetchAll() {
-      const { data } = await supabaseRef.current.from("tasks").select("*");
-      setAllTasks((data ?? []) as Task[]);
+      try {
+        const data = await api.getTasks();
+        setAllTasks(data);
+      } catch {
+        // ignore
+      }
     }
     fetchAll();
   }, [tasks]); // refetch when project tasks change
@@ -44,7 +47,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   async function handleUnschedule(task: Task) {
     if (!task.google_event_id) return;
     try {
-      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await api.deleteCalendarEvent(task.google_event_id);
       await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
       toast.success("Removed from calendar");
     } catch {

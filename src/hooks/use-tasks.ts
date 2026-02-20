@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import * as api from "@/lib/api";
 import { Task, TaskInsert, TaskUpdate } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -13,55 +13,38 @@ interface UseTasksOptions {
 export function useTasks(options: UseTasksOptions = {}) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
 
   const fetchTasks = useCallback(async () => {
-    let query = supabase.from("tasks").select("*");
-
-    if (options.projectId) {
-      query = query.eq("project_id", options.projectId);
+    try {
+      const data = await api.getTasks({
+        project_id: options.projectId,
+        day: options.day,
+      });
+      setTasks(data);
+    } catch {
+      toast.error("Failed to load tasks");
     }
-    if (options.day) {
-      query = query.eq("day", options.day);
-    }
-
-    query = query.order("sort_order").order("created_at");
-
-    const { data } = await query;
-    setTasks((data ?? []) as Task[]);
     setLoading(false);
-  }, [supabase, options.projectId, options.day]);
+  }, [options.projectId, options.day]);
 
   useEffect(() => {
     fetchTasks();
-
-    const channel = supabase
-      .channel(`tasks-${options.projectId ?? options.day ?? "all"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => fetchTasks())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchTasks, supabase, options.projectId, options.day]);
+  }, [fetchTasks]);
 
   async function createTask(task: TaskInsert) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase.from("tasks").insert({
-      ...task,
-      user_id: user.id,
-    });
-    if (error) throw error;
-    await fetchTasks();
+    try {
+      await api.createTask(task);
+      await fetchTasks();
+    } catch {
+      toast.error("Failed to create task");
+    }
   }
 
   async function updateTask(id: string, updates: TaskUpdate) {
     const prev = tasks;
     setTasks((t) => t.map((task) => task.id === id ? { ...task, ...updates } : task));
     try {
-      const { error } = await supabase.from("tasks").update(updates).eq("id", id);
-      if (error) throw error;
+      await api.updateTask(id, updates);
     } catch {
       setTasks(prev);
       toast.error("Failed to update task");
@@ -72,8 +55,7 @@ export function useTasks(options: UseTasksOptions = {}) {
     const prev = tasks;
     setTasks((t) => t.filter((task) => task.id !== id));
     try {
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
-      if (error) throw error;
+      await api.deleteTask(id);
     } catch {
       setTasks(prev);
       toast.error("Failed to delete task");
@@ -89,5 +71,5 @@ export function useTasks(options: UseTasksOptions = {}) {
     await updateTask(taskId, { day, status: "planned" });
   }
 
-  return { tasks, loading, createTask, updateTask, deleteTask, toggleDone, assignToDay };
+  return { tasks, loading, createTask, updateTask, deleteTask, toggleDone, assignToDay, refetch: fetchTasks };
 }

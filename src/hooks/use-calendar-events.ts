@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import * as api from "@/lib/api";
 import { CalendarEvent } from "@/lib/types";
 
 export function useCalendarEvents(start: string, end: string) {
@@ -12,19 +13,12 @@ export function useCalendarEvents(start: string, end: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/calendar/events?start=${start}&end=${end}`);
-      if (res.ok) {
-        const { events: data } = await res.json();
-        setEvents(data ?? []);
-      } else {
-        const body = await res.json().catch(() => ({}));
-        const msg = body.error ?? `Calendar fetch failed (${res.status})`;
-        setError(msg);
-        console.error("Calendar events fetch error:", msg);
-      }
-    } catch (err) {
-      setError("Failed to connect to calendar");
-      console.error("Calendar events fetch exception:", err);
+      const data = await api.getCalendarEvents(start, end);
+      setEvents(data ?? []);
+    } catch (err: unknown) {
+      const msg = (err as { detail?: string })?.detail ?? "Failed to connect to calendar";
+      setError(msg);
+      console.error("Calendar events fetch error:", msg);
     }
     setLoading(false);
   }, [start, end]);

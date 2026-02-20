@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, FolderKanban, Clock, CheckSquare, LogOut, ListTodo, Settings, CircleHelp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -19,10 +19,10 @@ const links = [
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const { logout } = useAuth();
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  function signOut() {
+    logout();
     router.push("/login");
   }
 

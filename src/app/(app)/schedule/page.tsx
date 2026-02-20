@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import * as api from "@/lib/api";
 import { useSettings } from "@/hooks/use-settings";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
@@ -19,7 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, Wand2 } from "lucide-react";
 import { Task } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export default function SchedulePage() {
@@ -27,8 +27,6 @@ export default function SchedulePage() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [allTasksLoaded, setAllTasksLoaded] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
 
   const {
     settings,
@@ -61,10 +59,14 @@ export default function SchedulePage() {
   }, [projects]);
 
   const fetchAllTasks = useCallback(async () => {
-    const { data } = await supabase.from("tasks").select("*").order("created_at");
-    setAllTasks((data ?? []) as Task[]);
-    setAllTasksLoaded(true);
-  }, [supabase]);
+    try {
+      const data = await api.getTasks();
+      setAllTasks(data);
+      setAllTasksLoaded(true);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     fetchAllTasks();
@@ -170,7 +172,7 @@ export default function SchedulePage() {
   async function handleRemoveFromCalendar(task: Task) {
     if (!task.google_event_id) return;
     try {
-      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await api.deleteCalendarEvent(task.google_event_id);
       await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
       await refetchEvents();
       toast.success("Removed from calendar");

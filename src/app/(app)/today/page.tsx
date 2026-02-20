@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import * as api from "@/lib/api";
 import { useTasks } from "@/hooks/use-tasks";
 import { useSettings } from "@/hooks/use-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { todayString, getSuggestedTasks } from "@/lib/utils";
 import { format, addDays, parseISO } from "date-fns";
-import { CalendarEvent } from "@/lib/types";
 import { toast } from "sonner";
 
 function TodayContent() {
@@ -27,8 +26,6 @@ function TodayContent() {
   const [allBacklogTasks, setAllBacklogTasks] = useState<Task[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [doneOpen, setDoneOpen] = useState(false);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
 
   const { settings } = useSettings();
   const { projects } = useProjects();
@@ -40,13 +37,13 @@ function TodayContent() {
   const { tasks, loading, createTask, updateTask, deleteTask, toggleDone, assignToDay } = useTasks({ day: date });
 
   const fetchBacklog = useCallback(async () => {
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("status", "backlog")
-      .is("day", null);
-    setAllBacklogTasks((data ?? []) as Task[]);
-  }, [supabase]);
+    try {
+      const data = await api.getTasks({ status: "backlog" });
+      setAllBacklogTasks(data.filter((t) => !t.day));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     fetchBacklog();
@@ -54,8 +51,12 @@ function TodayContent() {
 
   useEffect(() => {
     async function fetchAll() {
-      const { data } = await supabaseRef.current.from("tasks").select("*");
-      setAllTasks((data ?? []) as Task[]);
+      try {
+        const data = await api.getTasks();
+        setAllTasks(data);
+      } catch {
+        // ignore
+      }
     }
     fetchAll();
   }, [tasks]); // refetch when day tasks change
@@ -67,7 +68,7 @@ function TodayContent() {
   async function handleUnschedule(task: Task) {
     if (!task.google_event_id) return;
     try {
-      await fetch(`/api/calendar/events/${task.google_event_id}`, { method: "DELETE" });
+      await api.deleteCalendarEvent(task.google_event_id);
       await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
       toast.success("Removed from calendar");
     } catch {
