@@ -23,9 +23,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
       const result = isSignup
-        ? await api.signup(email, password)
-        : await api.login(email, password);
+        ? await api.signup(trimmedEmail, trimmedPassword)
+        : await api.login(trimmedEmail, trimmedPassword);
 
       await login(result.access_token);
       router.push("/today");
@@ -58,6 +60,9 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="email"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -70,6 +75,9 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={isSignup ? 8 : undefined}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="current-password"
             />
           </div>
           <Button type="submit" size="lg" disabled={loading} className="w-full">
