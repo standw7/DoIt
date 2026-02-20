@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:3003/settings?google=callback"
 
+    # Internal API key for service-to-service auth (e.g. telegram bot)
+    INTERNAL_API_KEY: str = ""
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

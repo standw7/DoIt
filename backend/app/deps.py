@@ -25,13 +25,23 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    """Decode JWT from Authorization header and return the authenticated user."""
+    """Decode JWT from Authorization header and return the authenticated user.
+
+    Also accepts an internal API key for service-to-service auth (e.g. telegram bot).
+    """
     token = credentials.credentials
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # Check internal API key first (service-to-service auth)
+    if settings.INTERNAL_API_KEY and token == settings.INTERNAL_API_KEY:
+        user = db.query(User).first()
+        if user is None:
+            raise credentials_exception
+        return user
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
