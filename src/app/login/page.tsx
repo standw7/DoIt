@@ -30,7 +30,7 @@ export default function LoginPage() {
         : await api.login(trimmedEmail, trimmedPassword);
 
       await login(result.access_token);
-      router.push("/today");
+      router.push("/schedule");
     } catch (err: unknown) {
       const detail = (err as { detail?: string })?.detail ?? "Authentication failed";
       toast.error(detail);
