@@ -20,6 +20,7 @@ class UserSettings(Base):
     working_hours_end: Mapped[str] = mapped_column(String(5), default="17:00")
     daily_minutes_budget: Mapped[int] = mapped_column(Integer, default=120)
     auto_assign_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    skip_weekends: Mapped[bool] = mapped_column(Boolean, default=False)
     doit_calendar_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

@@ -90,6 +90,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         workingHoursStart={settings.working_hours_start}
         workingHoursEnd={settings.working_hours_end}
         dailyBudget={settings.daily_minutes_budget}
+        skipWeekends={settings.skip_weekends}
       />
 
       {backlogTasks.length > 0 && (

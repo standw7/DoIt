@@ -17,6 +17,7 @@ interface SettingsPanelProps {
   workingHoursEnd: string;
   dailyBudget: number;
   autoAssignEnabled: boolean;
+  skipWeekends: boolean;
   calendarConnected: boolean;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
@@ -27,6 +28,7 @@ export function SettingsPanel({
   workingHoursEnd,
   dailyBudget,
   autoAssignEnabled,
+  skipWeekends,
   calendarConnected,
   onUpdate,
   onSetupCalendar,
@@ -73,6 +75,14 @@ export function SettingsPanel({
   async function handleAutoAssignToggle(checked: boolean) {
     try {
       await onUpdate({ auto_assign_enabled: checked });
+    } catch {
+      toast.error("Failed to update setting");
+    }
+  }
+
+  async function handleSkipWeekendsToggle(checked: boolean) {
+    try {
+      await onUpdate({ skip_weekends: checked });
     } catch {
       toast.error("Failed to update setting");
     }
@@ -144,6 +154,21 @@ export function SettingsPanel({
             id="auto-assign"
             checked={autoAssignEnabled}
             onCheckedChange={handleAutoAssignToggle}
+          />
+        </div>
+
+        {/* Skip weekends */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="skip-weekends">No work weekends</Label>
+            <p className="text-xs text-muted-foreground">
+              Never schedule tasks on Saturday or Sunday
+            </p>
+          </div>
+          <Switch
+            id="skip-weekends"
+            checked={skipWeekends}
+            onCheckedChange={handleSkipWeekendsToggle}
           />
         </div>
 

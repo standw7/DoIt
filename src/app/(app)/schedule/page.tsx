@@ -130,6 +130,7 @@ export default function SchedulePage() {
         workingHoursStart: settings.working_hours_start,
         workingHoursEnd: settings.working_hours_end,
         dailyBudget: settings.daily_minutes_budget,
+        skipWeekends: settings.skip_weekends,
       });
 
       if (result.overBudget) {
@@ -211,6 +212,7 @@ export default function SchedulePage() {
           workingHoursStart={settings.working_hours_start}
           workingHoursEnd={settings.working_hours_end}
           dailyBudget={settings.daily_minutes_budget}
+          skipWeekends={settings.skip_weekends}
           onUpdateTask={handleOverdueUpdate}
           onRefresh={fetchAllTasks}
         />

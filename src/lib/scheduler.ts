@@ -8,6 +8,7 @@ interface SchedulerInput {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
+  skipWeekends?: boolean;
 }
 
 interface DayScore {
@@ -73,6 +74,7 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     workingHoursStart,
     workingHoursEnd,
     dailyBudget,
+    skipWeekends = false,
   } = input;
 
   const today = new Date();
@@ -97,6 +99,12 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     const candidateDate = addDays(today, i);
     const dateStr = format(candidateDate, "yyyy-MM-dd");
     const isToday = dateStr === todayStr;
+
+    // Skip weekends if setting is enabled
+    const dayOfWeek = candidateDate.getDay();
+    if (skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      continue;
+    }
 
     // Skip days before the task becomes available
     if (task.available_from && dateStr < task.available_from) {

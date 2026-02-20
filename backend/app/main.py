@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, engine
@@ -9,10 +10,23 @@ import app.models  # noqa: F401 — register all models with Base.metadata
 from app.routers import auth, calendar, projects, recurring_tasks, settings as settings_router, tasks
 
 
+def _run_migrations():
+    """Add missing columns to existing tables (SQLite has no ALTER COLUMN)."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        if "user_settings" in inspector.get_table_names():
+            columns = {c["name"] for c in inspector.get_columns("user_settings")}
+            if "skip_weekends" not in columns:
+                conn.execute(text(
+                    "ALTER TABLE user_settings ADD COLUMN skip_weekends BOOLEAN DEFAULT 0 NOT NULL"
+                ))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create all tables on startup (no-op if they already exist)
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     yield
 
 

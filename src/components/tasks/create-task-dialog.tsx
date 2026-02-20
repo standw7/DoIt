@@ -29,6 +29,7 @@ interface CreateTaskDialogProps {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
+  skipWeekends?: boolean;
   onCreate: (task: TaskInsert) => Promise<void>;
   onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
   projects?: ProjectOption[];
@@ -50,6 +51,7 @@ export function CreateTaskDialog({
   workingHoursStart,
   workingHoursEnd,
   dailyBudget,
+  skipWeekends = false,
   onCreate,
   onCreateRecurring,
   projects,
@@ -128,6 +130,7 @@ export function CreateTaskDialog({
         workingHoursStart,
         workingHoursEnd,
         dailyBudget,
+        skipWeekends,
       });
       autoAssigned = true;
     }

@@ -17,6 +17,7 @@ interface OverdueReviewProps {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
+  skipWeekends?: boolean;
   onUpdateTask: (id: string, updates: Record<string, any>) => Promise<void>;
   onRefresh: () => Promise<void>;
 }
@@ -28,6 +29,7 @@ export function OverdueReview({
   workingHoursStart,
   workingHoursEnd,
   dailyBudget,
+  skipWeekends = false,
   onUpdateTask,
   onRefresh,
 }: OverdueReviewProps) {
@@ -54,6 +56,7 @@ export function OverdueReview({
         workingHoursStart,
         workingHoursEnd,
         dailyBudget,
+        skipWeekends,
       });
 
       await onUpdateTask(task.id, {
@@ -118,6 +121,7 @@ export function OverdueReview({
         workingHoursStart,
         workingHoursEnd,
         dailyBudget,
+        skipWeekends,
       });
 
       try {

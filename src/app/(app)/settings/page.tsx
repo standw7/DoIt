@@ -66,6 +66,7 @@ function SettingsPageInner() {
         workingHoursEnd={settings.working_hours_end}
         dailyBudget={settings.daily_minutes_budget}
         autoAssignEnabled={settings.auto_assign_enabled}
+        skipWeekends={settings.skip_weekends}
         calendarConnected={calendarConnected}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}

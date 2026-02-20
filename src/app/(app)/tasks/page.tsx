@@ -131,6 +131,7 @@ export default function TasksPage() {
                 workingHoursStart={settings.working_hours_start}
                 workingHoursEnd={settings.working_hours_end}
                 dailyBudget={settings.daily_minutes_budget}
+                skipWeekends={settings.skip_weekends}
                 onCreate={handleCreateTask}
               />
             </div>

@@ -16,6 +16,7 @@ interface CreateTaskInlineProps {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
+  skipWeekends?: boolean;
   onCreate: (task: TaskInsert) => Promise<void>;
   onCreateRecurring?: (task: RecurringTaskInsert) => Promise<void>;
   projects?: ProjectOption[];

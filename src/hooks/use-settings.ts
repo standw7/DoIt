@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   working_hours_end: "17:00",
   daily_minutes_budget: 120,
   auto_assign_enabled: true,
+  skip_weekends: false,
   doit_calendar_id: null as string | null,
 };
 
@@ -59,6 +60,7 @@ export function useSettings() {
     working_hours_end: settings?.working_hours_end ?? DEFAULT_SETTINGS.working_hours_end,
     daily_minutes_budget: settings?.daily_minutes_budget ?? DEFAULT_SETTINGS.daily_minutes_budget,
     auto_assign_enabled: settings?.auto_assign_enabled ?? DEFAULT_SETTINGS.auto_assign_enabled,
+    skip_weekends: settings?.skip_weekends ?? DEFAULT_SETTINGS.skip_weekends,
     doit_calendar_id: settings?.doit_calendar_id ?? null,
   };
 

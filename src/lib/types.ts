@@ -56,6 +56,7 @@ export interface UserSettings {
   working_hours_end: string;
   daily_minutes_budget: number;
   auto_assign_enabled: boolean;
+  skip_weekends: boolean;
   doit_calendar_id: string | null;
   google_refresh_token: string | null;
   created_at: string;
