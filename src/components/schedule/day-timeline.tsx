@@ -262,6 +262,21 @@ export function DayTimeline({
     onTaskPositionsChangeRef.current(positions);
   }, [taskBlocks, tasks]);
 
+  // Current time (updates every minute for the red line indicator)
+  const [currentMinute, setCurrentMinute] = useState(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
+
+  useEffect(() => {
+    if (!isToday) return;
+    const interval = setInterval(() => {
+      const now = new Date();
+      setCurrentMinute(now.getHours() * 60 + now.getMinutes());
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [isToday]);
+
   // Height per hour in rem
   const HOUR_HEIGHT = 3.5;
 
@@ -413,6 +428,17 @@ export function DayTimeline({
                   style={{ top: `${i * HOUR_HEIGHT}rem` }}
                 />
               ))}
+
+              {/* Current time indicator */}
+              {isToday && currentMinute >= timelineRange.startMin && currentMinute <= timelineRange.startMin + timelineRange.totalMinutes && (
+                <div
+                  className="absolute left-0 right-0 z-30 flex items-center pointer-events-none"
+                  style={{ top: `${((currentMinute - timelineRange.startMin) / 60) * HOUR_HEIGHT}rem` }}
+                >
+                  <div className="h-2.5 w-2.5 -ml-[5px] rounded-full bg-red-500 shrink-0" />
+                  <div className="h-[2px] flex-1 bg-red-500" />
+                </div>
+              )}
 
               {/* Blocks */}
               {layoutBlocks.map(({ block, topRem, heightRem }) => {
