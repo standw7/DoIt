@@ -42,13 +42,24 @@ async def find_or_create_doit_calendar(access_token: str) -> str:
 # ── Events ──────────────────────────────────────────────────────
 
 
+async def get_all_calendar_ids(access_token: str) -> list[str]:
+    """List all calendar IDs the user has access to."""
+    headers = await _headers(access_token)
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(CALENDAR_LIST_URL, headers=headers)
+        resp.raise_for_status()
+        calendars = resp.json().get("items", [])
+        return [cal["id"] for cal in calendars]
+
+
 async def list_events(
     access_token: str,
     calendar_id: str,
     time_min: str,
     time_max: str,
 ) -> list[dict]:
-    """Fetch events from a calendar within a time range.
+    """Fetch events from a single calendar within a time range.
 
     time_min/time_max are date strings like "2026-02-19".
     Returns simplified event dicts.
@@ -91,6 +102,34 @@ async def list_events(
                 break
 
     return events
+
+
+async def list_all_events(
+    access_token: str,
+    time_min: str,
+    time_max: str,
+) -> list[dict]:
+    """Fetch events from ALL user calendars within a time range."""
+    calendar_ids = await get_all_calendar_ids(access_token)
+
+    all_events: list[dict] = []
+    for cal_id in calendar_ids:
+        try:
+            events = await list_events(access_token, cal_id, time_min, time_max)
+            all_events.extend(events)
+        except Exception:
+            # Skip calendars that error (e.g. permission issues)
+            continue
+
+    # Deduplicate by event ID (same event can appear in multiple calendars)
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for event in all_events:
+        if event["id"] not in seen:
+            seen.add(event["id"])
+            unique.append(event)
+
+    return unique
 
 
 async def create_event(

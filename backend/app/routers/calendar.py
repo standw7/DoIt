@@ -77,16 +77,14 @@ async def list_events(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List calendar events within a date range."""
+    """List calendar events from ALL user calendars within a date range."""
     user_settings = _get_settings(db, current_user.id)
 
-    if not user_settings.doit_calendar_id:
+    if not user_settings.google_refresh_token:
         return []
 
     access_token = await _get_access_token(user_settings)
-    events = await google_calendar.list_events(
-        access_token, user_settings.doit_calendar_id, start, end
-    )
+    events = await google_calendar.list_all_events(access_token, start, end)
     return events
 
 
