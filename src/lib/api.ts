@@ -227,8 +227,9 @@ export async function setupCalendar(): Promise<{ calendarId: string }> {
   return request("/calendar/setup", { method: "POST" });
 }
 
-export async function getGoogleAuthUrl(): Promise<{ url: string }> {
-  return request("/auth/google");
+export async function getGoogleAuthUrl(state?: string): Promise<{ url: string }> {
+  const qs = state ? `?state=${encodeURIComponent(state)}` : "";
+  return request(`/auth/google${qs}`);
 }
 
 export async function exchangeGoogleCode(code: string): Promise<void> {

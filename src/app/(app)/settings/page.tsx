@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/lib/auth-context";
 import { SettingsPanel } from "@/components/schedule/settings-panel";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const handledRef = useRef(false);
+  const { login } = useAuth();
 
   const {
     settings,
@@ -21,18 +23,24 @@ export default function SettingsPage() {
     handleGoogleCallback,
   } = useSettings();
 
-  // Handle Google OAuth callback: ?google=callback&code=...
+  // Handle Google OAuth callback: ?google=callback&code=...&state=<token>
   useEffect(() => {
     const google = searchParams.get("google");
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
     if (google === "callback" && code && !handledRef.current) {
       handledRef.current = true;
 
+      // Restore JWT from state param (needed when redirect lands on
+      // localhost:3003 but user logged in on tasks.homelab)
+      if (state && !localStorage.getItem("doit_token")) {
+        login(state);
+      }
+
       handleGoogleCallback(code)
         .then(() => {
           toast.success("Google Calendar connected!");
-          // Clean up URL params
           router.replace("/settings");
         })
         .catch((err: any) => {
@@ -40,7 +48,7 @@ export default function SettingsPage() {
           router.replace("/settings");
         });
     }
-  }, [searchParams, handleGoogleCallback, router]);
+  }, [searchParams, handleGoogleCallback, router, login]);
 
   if (loading) {
     return (

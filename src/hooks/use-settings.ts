@@ -36,8 +36,10 @@ export function useSettings() {
   }
 
   async function setupCalendar() {
-    // Start Google OAuth flow — redirect to Google
-    const { url } = await api.getGoogleAuthUrl();
+    // Encode the JWT token into the OAuth state so the callback on
+    // localhost:3003 can restore the session (different origin than tasks.homelab)
+    const token = localStorage.getItem("doit_token") ?? "";
+    const { url } = await api.getGoogleAuthUrl(token);
     window.location.href = url;
     return ""; // won't reach here — page redirects
   }

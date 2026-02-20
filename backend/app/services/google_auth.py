@@ -9,7 +9,7 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 SCOPES = "https://www.googleapis.com/auth/calendar"
 
 
-def get_authorization_url() -> str:
+def get_authorization_url(state: str | None = None) -> str:
     """Build the Google OAuth2 authorization URL."""
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -19,6 +19,8 @@ def get_authorization_url() -> str:
         "access_type": "offline",
         "prompt": "consent",
     }
+    if state:
+        params["state"] = state
     qs = "&".join(f"{k}={v}" for k, v in params.items())
     return f"{GOOGLE_AUTH_URL}?{qs}"
 

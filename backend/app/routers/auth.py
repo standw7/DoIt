@@ -93,14 +93,17 @@ class GoogleCodeRequest(BaseModel):
 
 
 @router.get("/google")
-def get_google_auth_url(current_user: User = Depends(get_current_user)):
+def get_google_auth_url(
+    state: str | None = None,
+    current_user: User = Depends(get_current_user),
+):
     """Return the Google OAuth authorization URL."""
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Google OAuth is not configured on this server.",
         )
-    return {"url": google_auth.get_authorization_url()}
+    return {"url": google_auth.get_authorization_url(state=state)}
 
 
 @router.post("/google/callback")

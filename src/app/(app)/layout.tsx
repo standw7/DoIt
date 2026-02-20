@@ -1,19 +1,30 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { NavWrapper } from "@/components/nav/nav-wrapper";
 import { useAuth } from "@/lib/auth-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Restore token from Google OAuth state param before auth check kicks in
+  const state = searchParams.get("state");
+  const isGoogleCallback = searchParams.get("google") === "callback";
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (isGoogleCallback && state && !isAuthenticated && !loading) {
+      login(state);
+    }
+  }, [isGoogleCallback, state, isAuthenticated, loading, login]);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated && !isGoogleCallback) {
       router.replace("/login");
     }
-  }, [loading, isAuthenticated, router]);
+  }, [loading, isAuthenticated, router, isGoogleCallback]);
 
   if (loading) {
     return (
@@ -23,7 +34,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
+  // Allow Google callback through even if not yet authenticated (token being restored)
+  if (!isAuthenticated && !isGoogleCallback) {
     return null;
   }
 
