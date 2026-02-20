@@ -9,7 +9,7 @@ import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useRecurringGeneration } from "@/hooks/use-recurring-generation";
 import { DateSelector } from "@/components/daily/date-selector";
-import { DayTimeline } from "@/components/schedule/day-timeline";
+import { DayTimeline, TaskPosition } from "@/components/schedule/day-timeline";
 import { ScheduleButton } from "@/components/schedule/schedule-button";
 import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
@@ -28,6 +28,7 @@ export default function SchedulePage() {
   const [allTasksLoaded, setAllTasksLoaded] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [rebalancing, setRebalancing] = useState(false);
+  const [taskPositions, setTaskPositions] = useState<TaskPosition[]>([]);
 
   const {
     settings,
@@ -335,6 +336,7 @@ export default function SchedulePage() {
           projectMap={projectMap}
           onClearTask={handleClearTask}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+          onTaskPositionsChange={setTaskPositions}
         />
       )}
 
@@ -355,9 +357,7 @@ export default function SchedulePage() {
         <ScheduleButton
           date={selectedDate}
           tasks={tasks}
-          events={events}
-          workStart={settings.working_hours_start}
-          workEnd={settings.working_hours_end}
+          taskPositions={taskPositions}
           onEventCreated={handleEventCreated}
         />
       )}

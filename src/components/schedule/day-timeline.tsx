@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical } from "lucide-react";
 import { parseISO, format } from "date-fns";
+
+export interface TaskPosition {
+  taskId: string;
+  startMin: number;
+  endMin: number;
+}
 
 interface DayTimelineProps {
   date: string;
@@ -17,6 +23,7 @@ interface DayTimelineProps {
   projectMap?: Record<string, string>;
   onClearTask?: (taskId: string) => void;
   onRemoveFromCalendar?: (task: Task) => void;
+  onTaskPositionsChange?: (positions: TaskPosition[]) => void;
 }
 
 function timeToMinutes(time: string): number {
@@ -80,12 +87,26 @@ export function DayTimeline({
   projectMap = {},
   onClearTask,
   onRemoveFromCalendar,
+  onTaskPositionsChange,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
 
+  // Drag overrides: taskId → startMin (user has dragged this task to a new position)
+  const [dragOverrides, setDragOverrides] = useState<Record<string, number>>({});
 
-  const { blocks, overflowTasks } = useMemo(() => {
+  // Reset drag overrides when the date or tasks change
+  const prevKey = useRef("");
+  const currentKey = `${date}-${tasks.map((t) => t.id).join(",")}`;
+  if (currentKey !== prevKey.current) {
+    prevKey.current = currentKey;
+    if (Object.keys(dragOverrides).length > 0) {
+      setDragOverrides({});
+    }
+  }
+
+  // Compute blocks from events and auto-placed tasks
+  const { autoBlocks, eventBlocks, overflowTasks } = useMemo(() => {
     // Map google_event_id → task so we can identify task events on the calendar
     const taskByEventId = new Map<string, Task>();
     for (const t of tasks) {
@@ -124,9 +145,7 @@ export function DayTimeline({
       }
     }
 
-    // Collect unscheduled tasks to auto-stack — shortest first for best-fit
-    // Use 30 min default for tasks without an estimate so they still show on the timeline
-    // Skip tasks already shown via their calendar event above
+    // Collect unscheduled tasks to auto-stack
     const unscheduled = tasks
       .filter(
         (t) =>
@@ -152,8 +171,7 @@ export function DayTimeline({
       gapList.push({ start: gapBuildCursor, cursor: gapBuildCursor, end: workEndMin });
     }
 
-    // First-fit: for each task, find the earliest gap that fits it
-    // Tasks get a 5-minute buffer before and after them
+    // First-fit with 5-minute buffers
     const TASK_GAP = 5;
     const taskBlocks: TimeBlock[] = [];
     const overflowTasks: Task[] = [];
@@ -188,12 +206,43 @@ export function DayTimeline({
       }
     }
 
-    const allBlocks = [...eventBlocks, ...taskBlocks].sort(
-      (a, b) => a.startMin - b.startMin
-    );
-
-    return { blocks: allBlocks, overflowTasks };
+    return { autoBlocks: taskBlocks, eventBlocks, overflowTasks };
   }, [events, tasks, date, workStartMin, workEndMin, projectMap]);
+
+  // Apply drag overrides to task blocks
+  const taskBlocks = useMemo(() => {
+    return autoBlocks.map((block) => {
+      const override = dragOverrides[block.id];
+      if (override !== undefined) {
+        return { ...block, startMin: override, endMin: override + block.durationMinutes };
+      }
+      return block;
+    });
+  }, [autoBlocks, dragOverrides]);
+
+  // Combined sorted blocks for rendering
+  const blocks = useMemo(() => {
+    return [...eventBlocks, ...taskBlocks].sort((a, b) => a.startMin - b.startMin);
+  }, [eventBlocks, taskBlocks]);
+
+  // Notify parent of task positions whenever they change
+  const onTaskPositionsChangeRef = useRef(onTaskPositionsChange);
+  onTaskPositionsChangeRef.current = onTaskPositionsChange;
+
+  useEffect(() => {
+    if (!onTaskPositionsChangeRef.current) return;
+    const unscheduledTaskBlocks = taskBlocks.filter(
+      (b) => b.type === "task" && !tasks.find((t) => t.id === b.id)?.google_event_id
+    );
+    // Include all task blocks that don't have google_event_id (not yet on calendar)
+    const positions: TaskPosition[] = taskBlocks
+      .filter((b) => {
+        const task = tasks.find((t) => t.id === b.id);
+        return task && !task.google_event_id;
+      })
+      .map((b) => ({ taskId: b.id, startMin: b.startMin, endMin: b.endMin }));
+    onTaskPositionsChangeRef.current(positions);
+  }, [taskBlocks, tasks]);
 
   // Height per hour in rem
   const HOUR_HEIGHT = 3.5;
@@ -245,6 +294,71 @@ export function DayTimeline({
     return Math.max(gridHeight, maxBlockBottom);
   }, [timelineRange, HOUR_HEIGHT, layoutBlocks]);
 
+  // --- Drag and drop ---
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{
+    taskId: string;
+    startY: number;
+    startMinOriginal: number;
+    durationMinutes: number;
+  } | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const remToPx = useCallback(() => {
+    return parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }, []);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent, block: TimeBlock) => {
+      // Only allow dragging unscheduled task blocks
+      const task = tasks.find((t) => t.id === block.id);
+      if (!task || task.google_event_id) return;
+      if (block.type !== "task") return;
+
+      e.preventDefault();
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
+      dragState.current = {
+        taskId: block.id,
+        startY: e.clientY,
+        startMinOriginal: block.startMin,
+        durationMinutes: block.durationMinutes,
+      };
+      setDraggingId(block.id);
+    },
+    [tasks]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragState.current || !timelineRef.current) return;
+
+      const pxPerRem = remToPx();
+      const pxPerMinute = (HOUR_HEIGHT * pxPerRem) / 60;
+      const deltaY = e.clientY - dragState.current.startY;
+      const deltaMin = Math.round(deltaY / pxPerMinute / 5) * 5; // Snap to 5-min increments
+
+      const newStartMin = Math.max(
+        workStartMin,
+        Math.min(
+          workEndMin - dragState.current.durationMinutes,
+          dragState.current.startMinOriginal + deltaMin
+        )
+      );
+
+      setDragOverrides((prev) => ({
+        ...prev,
+        [dragState.current!.taskId]: newStartMin,
+      }));
+    },
+    [workStartMin, workEndMin, remToPx]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    dragState.current = null;
+    setDraggingId(null);
+  }, []);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -273,8 +387,11 @@ export function DayTimeline({
 
             {/* Timeline blocks column — absolute positioned */}
             <div
+              ref={timelineRef}
               className="relative flex-1 border-l border-border/50"
               style={{ height: `${timelineHeightRem}rem` }}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
             >
               {/* Hour grid lines */}
               {timelineHours.slice(0, -1).map((hour, i) => (
@@ -288,6 +405,11 @@ export function DayTimeline({
               {/* Blocks */}
               {layoutBlocks.map(({ block, topRem, heightRem }) => {
                 const useCalendarColor = block.type === "event" && block.color;
+                const isDraggable =
+                  block.type === "task" &&
+                  !tasks.find((t) => t.id === block.id)?.google_event_id;
+                const isDragging = draggingId === block.id;
+
                 return (
                   <div
                     key={block.id}
@@ -296,7 +418,9 @@ export function DayTimeline({
                       !useCalendarColor && block.type === "event" &&
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
                       block.type === "task" &&
-                        "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                        "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
+                      isDraggable && "cursor-grab",
+                      isDragging && "cursor-grabbing ring-2 ring-green-500 shadow-lg z-20"
                     )}
                     style={{
                       top: `${topRem}rem`,
@@ -307,16 +431,23 @@ export function DayTimeline({
                             color: getContrastColor(block.color!),
                           }
                         : {}),
+                      ...(isDragging ? { opacity: 0.9 } : {}),
                     }}
+                    onPointerDown={isDraggable ? (e) => handlePointerDown(e, block) : undefined}
                   >
                     <div className="flex items-start justify-between gap-1 h-full">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{block.label}</div>
-                        <div className="opacity-70">
-                          {formatMinutes(block.durationMinutes)}
-                          {block.projectName && (
-                            <span className="ml-1.5">· {block.projectName}</span>
-                          )}
+                      <div className="flex items-start gap-1 min-w-0">
+                        {isDraggable && (
+                          <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{block.label}</div>
+                          <div className="opacity-70">
+                            {formatMinutes(block.durationMinutes)}
+                            {block.projectName && (
+                              <span className="ml-1.5">· {block.projectName}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {block.type === "task" && onClearTask && (

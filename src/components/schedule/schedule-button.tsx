@@ -2,40 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CalendarEvent, Task } from "@/lib/types";
+import { Task } from "@/lib/types";
 import { formatMinutes, todayString } from "@/lib/utils";
 import { CalendarPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { parseISO } from "date-fns";
 import * as api from "@/lib/api";
+import { TaskPosition } from "@/components/schedule/day-timeline";
 
 interface ScheduleButtonProps {
   date: string;
   tasks: Task[];
-  events: CalendarEvent[];
-  workStart: string;
-  workEnd: string;
+  taskPositions: TaskPosition[];
   onEventCreated: (taskId: string, eventId: string) => void;
-}
-
-interface FreeSlot {
-  startMin: number;
-  endMin: number;
-  durationMin: number;
-}
-
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function currentTimeMinutes(): number {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
-}
-
-function roundUpTo15(minutes: number): number {
-  return Math.ceil(minutes / 15) * 15;
 }
 
 function minutesToISO(date: string, totalMinutes: number): string {
@@ -47,87 +25,15 @@ function minutesToISO(date: string, totalMinutes: number): string {
   return dt.toISOString();
 }
 
-function getFreeSlots(
-  events: CalendarEvent[],
-  date: string,
-  workStartMin: number,
-  workEndMin: number
-): FreeSlot[] {
-  // If scheduling for today, start from current time (rounded up to next 15 min)
-  const isToday = date === todayString();
-  const effectiveStart = isToday
-    ? Math.max(workStartMin, roundUpTo15(currentTimeMinutes()))
-    : workStartMin;
-
-  // If current time is past work end, no slots available
-  if (effectiveStart >= workEndMin) return [];
-
-  const busy: { start: number; end: number }[] = [];
-
-  for (const event of events) {
-    if (event.allDay) continue;
-    if (!event.start.startsWith(date)) continue;
-
-    const eventStart = parseISO(event.start);
-    const eventEnd = parseISO(event.end);
-
-    const startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
-    let endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
-
-    if (endMin <= startMin) {
-      endMin = workEndMin;
-    }
-
-    busy.push({
-      start: Math.max(startMin, effectiveStart),
-      end: Math.min(endMin, workEndMin),
-    });
-  }
-
-  busy.sort((a, b) => a.start - b.start);
-
-  const merged: { start: number; end: number }[] = [];
-  for (const interval of busy) {
-    if (interval.start >= interval.end) continue;
-    if (merged.length > 0 && interval.start <= merged[merged.length - 1].end) {
-      merged[merged.length - 1].end = Math.max(
-        merged[merged.length - 1].end,
-        interval.end
-      );
-    } else {
-      merged.push({ ...interval });
-    }
-  }
-
-  const slots: FreeSlot[] = [];
-  let cursor = effectiveStart;
-
-  for (const interval of merged) {
-    if (cursor < interval.start) {
-      const duration = interval.start - cursor;
-      if (duration >= 15) {
-        slots.push({ startMin: cursor, endMin: interval.start, durationMin: duration });
-      }
-    }
-    cursor = Math.max(cursor, interval.end);
-  }
-
-  if (cursor < workEndMin) {
-    const duration = workEndMin - cursor;
-    if (duration >= 15) {
-      slots.push({ startMin: cursor, endMin: workEndMin, durationMin: duration });
-    }
-  }
-
-  return slots;
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 export function ScheduleButton({
   date,
   tasks,
-  events,
-  workStart,
-  workEnd,
+  taskPositions,
   onEventCreated,
 }: ScheduleButtonProps) {
   const [scheduling, setScheduling] = useState(false);
@@ -141,13 +47,12 @@ export function ScheduleButton({
 
   // Check if this is a past date
   const isPast = date < todayString();
-  // Check if today but past work hours
   const isToday = date === todayString();
-  const workEndMin = timeToMinutes(workEnd);
-  const pastWorkHours = isToday && currentTimeMinutes() >= workEndMin;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
 
   if (unscheduledTasks.length === 0) return null;
-  if (isPast || pastWorkHours) return null;
+  if (isPast) return null;
 
   const totalMinutes = unscheduledTasks.reduce(
     (sum, t) => sum + (t.estimated_minutes ?? 0),
@@ -158,48 +63,18 @@ export function ScheduleButton({
     setScheduling(true);
 
     try {
-      const workStartMin = timeToMinutes(workStart);
-      const workEndMin = timeToMinutes(workEnd);
-
-      const freeSlots = getFreeSlots(events, date, workStartMin, workEndMin);
-
-      // Sort tasks shortest first — small tasks fill tight gaps,
-      // large gaps preserved for bigger tasks
-      const sortedTasks = [...unscheduledTasks].sort(
-        (a, b) => (a.estimated_minutes ?? 0) - (b.estimated_minutes ?? 0)
-      );
-
       let scheduled = 0;
       let skipped = 0;
 
-      const slotRemaining = freeSlots.map((s) => ({
-        ...s,
-        cursor: s.startMin,
-      }));
-
-      for (const task of sortedTasks) {
-        const duration = task.estimated_minutes ?? 0;
-        if (duration <= 0) continue;
-
-        // Best-fit: find the smallest gap that fits this task
-        let bestIdx = -1;
-        let bestAvailable = Infinity;
-        for (let i = 0; i < slotRemaining.length; i++) {
-          const available = slotRemaining[i].endMin - slotRemaining[i].cursor;
-          if (available >= duration && available < bestAvailable) {
-            bestIdx = i;
-            bestAvailable = available;
-          }
-        }
-
-        if (bestIdx === -1) {
+      for (const task of unscheduledTasks) {
+        const position = taskPositions.find((p) => p.taskId === task.id);
+        if (!position) {
           skipped++;
           continue;
         }
 
-        const slot = slotRemaining[bestIdx];
-        const startISO = minutesToISO(date, slot.cursor);
-        const endISO = minutesToISO(date, slot.cursor + duration);
+        const startISO = minutesToISO(date, position.startMin);
+        const endISO = minutesToISO(date, position.endMin);
 
         try {
           const result = await api.createCalendarEvent({
@@ -211,7 +86,6 @@ export function ScheduleButton({
           });
 
           onEventCreated(task.id, result.eventId);
-          slot.cursor += duration;
           scheduled++;
         } catch {
           skipped++;
@@ -225,7 +99,7 @@ export function ScheduleButton({
       }
       if (skipped > 0) {
         toast.warning(
-          `${skipped} task${skipped > 1 ? "s" : ""} couldn't fit into free time`
+          `${skipped} task${skipped > 1 ? "s" : ""} couldn't be scheduled`
         );
       }
     } catch {
