@@ -10,7 +10,8 @@ import { TaskCard } from "@/components/tasks/task-card";
 import { CreateTaskInline } from "@/components/tasks/create-task-inline";
 import { ProgressBar } from "@/components/projects/progress-bar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { Task } from "@/lib/types";
 import * as api from "@/lib/api";
@@ -29,6 +30,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { createRecurringTask } = useRecurringTasks();
 
   const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [doneOpen, setDoneOpen] = useState(false);
 
   useEffect(() => {
     async function fetchAll() {
@@ -113,14 +115,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {doneTasks.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-2">Done ({doneTasks.length})</h2>
-          <div className="space-y-2">
+        <Collapsible open={doneOpen} onOpenChange={setDoneOpen} className="mt-6">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between text-muted-foreground">
+              Done ({doneTasks.length})
+              <ChevronDown className={`h-4 w-4 transition-transform ${doneOpen ? "rotate-180" : ""}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 mt-2">
             {doneTasks.map((task) => (
               <TaskCard key={task.id} task={task} onToggleDone={toggleDone} onUpdate={updateTask} onDelete={deleteTask} onUnschedule={handleUnschedule} projects={projects} />
             ))}
-          </div>
-        </section>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
