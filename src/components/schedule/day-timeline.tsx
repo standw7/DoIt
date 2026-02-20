@@ -216,6 +216,32 @@ export function DayTimeline({
     return result;
   }, [timelineRange]);
 
+  // Layout pass: compute adjusted positions so blocks never visually overlap
+  const layoutBlocks = useMemo(() => {
+    const result: { block: TimeBlock; topRem: number; heightRem: number }[] = [];
+    let prevVisualBottom = 0;
+
+    for (const block of blocks) {
+      const naturalTopRem = ((block.startMin - timelineRange.startMin) / 60) * HOUR_HEIGHT;
+      const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 1.5);
+      // Push down if this block would overlap the previous block's visual extent
+      const topRem = Math.max(naturalTopRem, prevVisualBottom);
+      result.push({ block, topRem, heightRem });
+      prevVisualBottom = topRem + heightRem;
+    }
+
+    return result;
+  }, [blocks, timelineRange.startMin, HOUR_HEIGHT]);
+
+  // Timeline height: use grid height or last block's visual bottom, whichever is larger
+  const timelineHeightRem = useMemo(() => {
+    const gridHeight = (timelineRange.endHour - timelineRange.startHour) * HOUR_HEIGHT;
+    if (layoutBlocks.length === 0) return gridHeight;
+    const last = layoutBlocks[layoutBlocks.length - 1];
+    const maxBlockBottom = last.topRem + last.heightRem;
+    return Math.max(gridHeight, maxBlockBottom);
+  }, [timelineRange, HOUR_HEIGHT, layoutBlocks]);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -245,7 +271,7 @@ export function DayTimeline({
             {/* Timeline blocks column — absolute positioned */}
             <div
               className="relative flex-1 border-l border-border/50"
-              style={{ height: `${(timelineRange.endHour - timelineRange.startHour) * HOUR_HEIGHT}rem` }}
+              style={{ height: `${timelineHeightRem}rem` }}
             >
               {/* Hour grid lines */}
               {timelineHours.slice(0, -1).map((hour, i) => (
@@ -257,9 +283,7 @@ export function DayTimeline({
               ))}
 
               {/* Blocks */}
-              {blocks.map((block) => {
-                const topRem = ((block.startMin - timelineRange.startMin) / 60) * HOUR_HEIGHT;
-                const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 1.5);
+              {layoutBlocks.map(({ block, topRem, heightRem }) => {
                 const useCalendarColor = block.type === "event" && block.color;
                 return (
                   <div
