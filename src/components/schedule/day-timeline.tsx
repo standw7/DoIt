@@ -153,6 +153,8 @@ export function DayTimeline({
     }
 
     // First-fit: for each task, find the earliest gap that fits it
+    // Tasks get a 5-minute buffer before and after them
+    const TASK_GAP = 5;
     const taskBlocks: TimeBlock[] = [];
     const overflowTasks: Task[] = [];
 
@@ -162,7 +164,7 @@ export function DayTimeline({
 
       for (let i = 0; i < gapList.length; i++) {
         const available = gapList[i].end - gapList[i].cursor;
-        if (available >= dur) {
+        if (available >= dur + TASK_GAP * 2) {
           bestIdx = i;
           break;
         }
@@ -170,16 +172,17 @@ export function DayTimeline({
 
       if (bestIdx !== -1) {
         const gap = gapList[bestIdx];
+        const startMin = gap.cursor + TASK_GAP;
         taskBlocks.push({
           type: "task",
           id: task.id,
           label: task.name,
-          startMin: gap.cursor,
-          endMin: gap.cursor + dur,
+          startMin,
+          endMin: startMin + dur,
           durationMinutes: dur,
           projectName: task.project_id ? projectMap[task.project_id] : undefined,
         });
-        gap.cursor += dur;
+        gap.cursor = startMin + dur;
       } else {
         overflowTasks.push(task);
       }
@@ -223,7 +226,7 @@ export function DayTimeline({
 
     for (const block of blocks) {
       const naturalTopRem = ((block.startMin - timelineRange.startMin) / 60) * HOUR_HEIGHT;
-      const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 1.5);
+      const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 2.5);
       // Push down if this block would overlap the previous block's visual extent
       const topRem = Math.max(naturalTopRem, prevVisualBottom);
       result.push({ block, topRem, heightRem });
