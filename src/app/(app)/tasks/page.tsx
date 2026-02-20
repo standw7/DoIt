@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
 import { RecurringTasksSection } from "@/components/settings/recurring-tasks-section";
-import { Loader2, ListTodo, CheckCircle2, ChevronDown } from "lucide-react";
+import { Loader2, ListTodo, CheckCircle2, ChevronDown, Pencil, X } from "lucide-react";
+import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { format, parseISO, addDays, isBefore, startOfDay } from "date-fns";
 import { rebalanceAutoAssigned } from "@/lib/scheduler";
 
@@ -31,6 +32,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [oneTimeOpen, setOneTimeOpen] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("2days");
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const { settings } = useSettings();
   const { events } = useCalendarEvents(todayString(), todayString());
@@ -77,6 +79,24 @@ export default function TasksPage() {
       if (changes.length > 0) {
         await fetchAllTasks();
       }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleUpdateTask(id: string, updates: Partial<Task>) {
+    try {
+      await api.updateTask(id, updates);
+      await fetchAllTasks();
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleDeleteTask(id: string) {
+    try {
+      await api.deleteTask(id);
+      setAllTasks((prev) => prev.filter((t) => t.id !== id));
     } catch {
       // ignore
     }
@@ -206,18 +226,26 @@ export default function TasksPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
                         {task.estimated_minutes && (
                           <Badge variant="outline" className="text-xs">
                             {formatMinutes(task.estimated_minutes)}
                           </Badge>
                         )}
-                        <Badge
-                          variant="secondary"
-                          className="text-xs"
+                        <button
+                          onClick={() => setEditingTask(task)}
+                          className="rounded p-1 text-muted-foreground hover:bg-muted"
+                          title="Edit task"
                         >
-                          {task.status}
-                        </Badge>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="rounded p-1 text-muted-foreground hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+                          title="Delete task"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -258,6 +286,22 @@ export default function TasksPage() {
         onUpdate={updateRecurringTask}
         onDelete={deleteRecurringTask}
       />
+
+      {editingTask && (
+        <TaskDetailDialog
+          task={editingTask}
+          open={true}
+          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+          onUpdate={(id, updates) => {
+            handleUpdateTask(id, updates);
+            setEditingTask(null);
+          }}
+          onDelete={(id) => {
+            handleDeleteTask(id);
+            setEditingTask(null);
+          }}
+        />
+      )}
     </div>
   );
 }
