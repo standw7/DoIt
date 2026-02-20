@@ -72,6 +72,14 @@ interface TimeBlock {
   projectName?: string;
 }
 
+function minutesToTimeStr(totalMin: number): string {
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const match = hex.replace("#", "").match(/.{2}/g);
   if (!match || match.length < 3) return null;
@@ -445,7 +453,7 @@ export function DayTimeline({
                         <div className="min-w-0">
                           <div className="font-medium truncate">{block.label}</div>
                           <div className="opacity-70">
-                            {formatMinutes(block.durationMinutes)}
+                            {minutesToTimeStr(block.startMin)}–{minutesToTimeStr(block.endMin)}
                             {block.projectName && (
                               <span className="ml-1.5">· {block.projectName}</span>
                             )}
@@ -473,6 +481,11 @@ export function DayTimeline({
       {(() => {
         const activeTasks = tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
         if (activeTasks.length === 0) return null;
+        // Build lookup for task time ranges from all blocks
+        const blockTimeMap = new Map<string, { startMin: number; endMin: number }>();
+        for (const b of blocks) {
+          blockTimeMap.set(b.id, { startMin: b.startMin, endMin: b.endMin });
+        }
         return (
           <Card>
             <CardHeader>
@@ -481,14 +494,21 @@ export function DayTimeline({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {activeTasks.map((task) => (
+              {activeTasks.map((task) => {
+                const timeRange = blockTimeMap.get(task.id);
+                return (
                 <div
                   key={task.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
                     <span className="font-medium">{task.name}</span>
-                    {task.estimated_minutes && (
+                    {timeRange && (
+                      <span className="ml-2 text-muted-foreground">
+                        {minutesToTimeStr(timeRange.startMin)}–{minutesToTimeStr(timeRange.endMin)}
+                      </span>
+                    )}
+                    {!timeRange && task.estimated_minutes && (
                       <span className="ml-2 text-muted-foreground">
                         {formatMinutes(task.estimated_minutes)}
                       </span>
@@ -523,7 +543,8 @@ export function DayTimeline({
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         );
