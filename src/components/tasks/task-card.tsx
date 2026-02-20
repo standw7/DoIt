@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, CalendarPlus, CalendarMinus, Pencil, Clock } from "lucide-react";
+import { MoreHorizontal, X, CalendarPlus, CalendarMinus, Clock } from "lucide-react";
 import { Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
@@ -39,7 +39,15 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
 
   return (
     <>
-      <Card className={cn("flex items-start gap-3 p-3", isDone && "opacity-60")}>
+      <Card className={cn("relative flex items-start gap-3 p-3 pr-9", isDone && "opacity-60")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-red-500"
+          onClick={() => onDelete(task.id)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
         <Checkbox
           checked={isDone}
           onCheckedChange={() => onToggleDone(task)}
@@ -70,36 +78,27 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
             )}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8 shrink-0"
-          onClick={() => setDetailOpen(true)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 shrink-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {onAssignToDay && (
-              <DropdownMenuItem onClick={() => onAssignToDay(task.id)}>
-                <CalendarPlus className="h-4 w-4 mr-2" /> Add to today
-              </DropdownMenuItem>
-            )}
-            {onUnschedule && task.google_event_id && (
-              <DropdownMenuItem onClick={() => onUnschedule(task)}>
-                <CalendarMinus className="h-4 w-4 mr-2" /> Remove from calendar
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
-              <Trash2 className="h-4 w-4 mr-2" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {(onAssignToDay || (onUnschedule && task.google_event_id)) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onAssignToDay && (
+                <DropdownMenuItem onClick={() => onAssignToDay(task.id)}>
+                  <CalendarPlus className="h-4 w-4 mr-2" /> Add to today
+                </DropdownMenuItem>
+              )}
+              {onUnschedule && task.google_event_id && (
+                <DropdownMenuItem onClick={() => onUnschedule(task)}>
+                  <CalendarMinus className="h-4 w-4 mr-2" /> Remove from calendar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </Card>
       <TaskDetailDialog
         task={task}
