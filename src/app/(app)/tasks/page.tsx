@@ -94,11 +94,12 @@ export default function TasksPage() {
   }
 
   async function handleDeleteTask(id: string) {
+    const prev = allTasks;
+    setAllTasks((tasks) => tasks.filter((t) => t.id !== id));
     try {
       await api.deleteTask(id);
-      setAllTasks((prev) => prev.filter((t) => t.id !== id));
     } catch {
-      // ignore
+      setAllTasks(prev);
     }
   }
 
