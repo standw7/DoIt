@@ -152,20 +152,19 @@ export function DayTimeline({
       gapList.push({ start: gapBuildCursor, cursor: gapBuildCursor, end: workEndMin });
     }
 
-    // Best-fit: for each task, find the smallest gap that fits it
+    // First-fit: for each task, find the earliest gap that fits it
     const taskBlocks: TimeBlock[] = [];
     const overflowTasks: Task[] = [];
 
     for (const task of unscheduled) {
       const dur = task.estimated_minutes ?? 30;
       let bestIdx = -1;
-      let bestAvailable = Infinity;
 
       for (let i = 0; i < gapList.length; i++) {
         const available = gapList[i].end - gapList[i].cursor;
-        if (available >= dur && available < bestAvailable) {
+        if (available >= dur) {
           bestIdx = i;
-          bestAvailable = available;
+          break;
         }
       }
 
