@@ -95,29 +95,53 @@ export function DayTimeline({
   }, [workStartMin, workEndMin]);
 
   const { blocks, overflowTasks } = useMemo(() => {
-    // Build event blocks
+    // Map google_event_id → task so we can identify task events on the calendar
+    const taskByEventId = new Map<string, Task>();
+    for (const t of tasks) {
+      if (t.google_event_id) taskByEventId.set(t.google_event_id, t);
+    }
+
+    // Build event blocks — mark task-owned events as type "task"
     const eventBlocks: TimeBlock[] = [];
+    const scheduledTaskEventIds = new Set<string>();
     for (const event of events) {
       const range = eventToTimeRange(event, date, workEndMin);
       if (!range) continue;
-      eventBlocks.push({
-        type: "event",
-        id: event.id,
-        label: event.summary,
-        startMin: range.startMin,
-        endMin: range.endMin,
-        durationMinutes: range.endMin - range.startMin,
-        color: event.color,
-      });
+      const matchedTask = taskByEventId.get(event.id);
+      if (matchedTask) {
+        // This calendar event belongs to a DoIt task — render as green task block
+        scheduledTaskEventIds.add(matchedTask.id);
+        eventBlocks.push({
+          type: "task",
+          id: matchedTask.id,
+          label: matchedTask.name,
+          startMin: range.startMin,
+          endMin: range.endMin,
+          durationMinutes: range.endMin - range.startMin,
+          projectName: matchedTask.project_id ? projectMap[matchedTask.project_id] : undefined,
+        });
+      } else {
+        eventBlocks.push({
+          type: "event",
+          id: event.id,
+          label: event.summary,
+          startMin: range.startMin,
+          endMin: range.endMin,
+          durationMinutes: range.endMin - range.startMin,
+          color: event.color,
+        });
+      }
     }
 
     // Collect unscheduled tasks to auto-stack — shortest first for best-fit
     // Use 30 min default for tasks without an estimate so they still show on the timeline
+    // Skip tasks already shown via their calendar event above
     const unscheduled = tasks
       .filter(
         (t) =>
           t.status === "planned" &&
-          !t.google_event_id
+          !t.google_event_id &&
+          !scheduledTaskEventIds.has(t.id)
       )
       .sort((a, b) => (a.estimated_minutes ?? 30) - (b.estimated_minutes ?? 30));
 

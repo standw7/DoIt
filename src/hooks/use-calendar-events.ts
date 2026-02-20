@@ -35,24 +35,25 @@ export function useCalendarEvents(start: string, end: string) {
   }, [start, end]);
 
   const refetch = useCallback(async () => {
+    // Silent refetch — don't set loading to avoid page flash
     invalidateCalendarCache();
-    setLoading(true);
-    setError(null);
     try {
       const data = await api.getCalendarEvents(start, end);
       setEvents(data ?? []);
       // Re-warm the cache for future navigations
       prefetchCalendarEvents(start, end);
-    } catch (err: unknown) {
-      const msg = (err as { detail?: string })?.detail ?? "Failed to connect to calendar";
-      setError(msg);
+    } catch {
+      // Silent — keep existing events on screen
     }
-    setLoading(false);
   }, [start, end]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
-  return { events, loading, error, refetch };
+  const removeEvent = useCallback((eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  }, []);
+
+  return { events, loading, error, refetch, removeEvent };
 }

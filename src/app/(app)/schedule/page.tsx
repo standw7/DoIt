@@ -38,7 +38,7 @@ export default function SchedulePage() {
 
   // Fetch 14-day window so auto-assign has full calendar picture
   const futureStr = useMemo(() => format(addDays(new Date(), 14), "yyyy-MM-dd"), []);
-  const { events: allEvents, loading: eventsLoading, error: calendarError, refetch: refetchEvents } = useCalendarEvents(
+  const { events: allEvents, loading: eventsLoading, error: calendarError, refetch: refetchEvents, removeEvent } = useCalendarEvents(
     todayString(),
     futureStr
   );
@@ -164,31 +164,31 @@ export default function SchedulePage() {
   }
 
   async function handleClearTask(taskId: string) {
-    // If the task has a calendar event, delete it first
     const task = tasks.find((t) => t.id === taskId) ?? allTasks.find((t) => t.id === taskId);
+    // Optimistically remove the calendar event from local state immediately
     if (task?.google_event_id) {
-      try {
-        await api.deleteCalendarEvent(task.google_event_id);
-      } catch {
-        // Calendar event might already be gone — continue
-      }
+      removeEvent(task.google_event_id);
     }
-    await updateTask(taskId, { day: null, status: "backlog", auto_assigned: false, google_event_id: null } as any);
-    await fetchAllTasks();
-    if (task?.google_event_id) await refetchEvents();
+    // Update task in background — no await chain that blocks UI
+    updateTask(taskId, { day: null, status: "backlog", auto_assigned: false, google_event_id: null } as any);
+    fetchAllTasks();
     toast.success("Task cleared — ready for reassignment");
+    // Delete calendar event in background
+    if (task?.google_event_id) {
+      api.deleteCalendarEvent(task.google_event_id).catch(() => {});
+      refetchEvents();
+    }
   }
 
   async function handleRemoveFromCalendar(task: Task) {
     if (!task.google_event_id) return;
-    try {
-      await api.deleteCalendarEvent(task.google_event_id);
-      await updateTask(task.id, { google_event_id: null, status: "planned" } as any);
-      await refetchEvents();
-      toast.success("Removed from calendar");
-    } catch {
-      toast.error("Failed to remove from calendar");
-    }
+    // Optimistically remove from local state immediately
+    removeEvent(task.google_event_id);
+    updateTask(task.id, { google_event_id: null, status: "planned" } as any);
+    toast.success("Removed from calendar");
+    // Delete in background
+    api.deleteCalendarEvent(task.google_event_id).catch(() => {});
+    refetchEvents();
   }
 
   async function handleEventCreated(taskId: string, eventId: string) {
