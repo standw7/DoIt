@@ -49,7 +49,7 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
   const todayStr = format(today, "yyyy-MM-dd");
   const workMinutes = getWorkingMinutes(workingHoursStart, workingHoursEnd);
 
-  // Determine the candidate window: today through day before due date (or 14 days out)
+  // Determine the candidate window: today through due date (or 14 days out)
   let endDate: Date;
   if (task.due_date) {
     endDate = parseISO(task.due_date);
@@ -93,54 +93,62 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       continue;
     }
 
-    // --- Budget score: prefer days at/under daily budget, hard penalty when over ---
+    // --- 1) Budget score (weight 0.40): stay at or under daily budget ---
     const taskMinutesAfter = taskMinutes + task.estimated_minutes;
     let budgetScore: number;
     if (taskMinutesAfter <= dailyBudget) {
-      // Under or at budget — good. Prefer filling toward the budget (80-100).
+      // Under or at budget — reward filling toward the limit
       budgetScore = 80 + (taskMinutesAfter / dailyBudget) * 20;
     } else {
-      // Over budget — severe penalty so any under-budget day always wins
+      // Over budget — hard penalty so under-budget days always win
       const overBy = taskMinutesAfter - dailyBudget;
       budgetScore = -50 - (overBy / dailyBudget) * 50;
     }
 
-    // --- Spread score (0-100): strongly prefer earlier days ---
-    let spreadScore: number;
-    if (totalDays <= 1) {
-      spreadScore = 50;
-    } else {
-      // Earlier days score much higher — push work ahead of deadlines
-      spreadScore = 100 - (i / (totalDays - 1)) * 80;
-      // Bonus for days with fewer tasks (encourages even distribution)
-      if (dayTasks.length === 0) spreadScore += 10;
-      spreadScore = Math.min(100, spreadScore);
+    // --- 2) Due date score (weight 0.25): schedule closer to now when due soon ---
+    let dueScore = 50; // default for tasks with no due date
+    if (task.due_date) {
+      const daysUntilDue = differenceInCalendarDays(parseISO(task.due_date), candidateDate);
+      if (daysUntilDue <= 0) {
+        dueScore = 100; // due today or overdue
+      } else if (daysUntilDue <= 2) {
+        dueScore = 90;
+      } else if (daysUntilDue <= 5) {
+        dueScore = 70;
+      } else {
+        dueScore = 40;
+      }
     }
 
-    // --- Capacity score (0-100): prefer days with more free time after this task ---
-    const freeAfterTask = Math.max(0, freeMinutes - task.estimated_minutes);
-    const capacityScore = totalWorkAvailable > 0
-      ? (freeAfterTask / totalWorkAvailable) * 100
-      : 0;
-
-    // --- Urgency score (0-100): high priority tasks go sooner ---
-    let urgencyScore = 50;
+    // --- 3) Priority score (weight 0.20): high priority → earlier days ---
+    let priorityScore = 50;
     if (task.priority === "high") {
-      urgencyScore = totalDays > 1 ? 100 - (i / (totalDays - 1)) * 60 : 100;
+      priorityScore = totalDays > 1 ? 100 - (i / (totalDays - 1)) * 40 : 100;
     } else if (task.priority === "low") {
-      urgencyScore = totalDays > 1 ? 30 + (i / (totalDays - 1)) * 40 : 50;
+      priorityScore = totalDays > 1 ? 30 + (i / (totalDays - 1)) * 30 : 40;
+    } else {
+      // medium: mild preference for earlier
+      priorityScore = totalDays > 1 ? 70 - (i / (totalDays - 1)) * 30 : 60;
+    }
+
+    // --- 4) Earliness score (weight 0.15): fill earlier days first ---
+    let earlinessScore: number;
+    if (totalDays <= 1) {
+      earlinessScore = 100;
+    } else {
+      earlinessScore = 100 - (i / (totalDays - 1)) * 80;
     }
 
     const total =
-      budgetScore * 0.35 +
-      capacityScore * 0.30 +
-      urgencyScore * 0.20 +
-      spreadScore * 0.15;
+      budgetScore * 0.40 +
+      dueScore * 0.25 +
+      priorityScore * 0.20 +
+      earlinessScore * 0.15;
 
     scores.push({
       date: dateStr,
       score: total,
-      breakdown: { budget: budgetScore, spread: spreadScore, capacity: capacityScore, urgency: urgencyScore },
+      breakdown: { budget: budgetScore, spread: earlinessScore, capacity: dueScore, urgency: priorityScore },
     });
   }
 

@@ -112,14 +112,14 @@ export function DayTimeline({
     }
 
     // Collect unscheduled tasks to auto-stack — shortest first for best-fit
+    // Use 30 min default for tasks without an estimate so they still show on the timeline
     const unscheduled = tasks
       .filter(
         (t) =>
           t.status === "planned" &&
-          !t.google_event_id &&
-          t.estimated_minutes
+          !t.google_event_id
       )
-      .sort((a, b) => (a.estimated_minutes ?? 0) - (b.estimated_minutes ?? 0));
+      .sort((a, b) => (a.estimated_minutes ?? 30) - (b.estimated_minutes ?? 30));
 
     // Sort events by start time to find gaps
     const sorted = [...eventBlocks].sort((a, b) => a.startMin - b.startMin);
@@ -142,7 +142,7 @@ export function DayTimeline({
     const overflowTasks: Task[] = [];
 
     for (const task of unscheduled) {
-      const dur = task.estimated_minutes!;
+      const dur = task.estimated_minutes ?? 30;
       let bestIdx = -1;
       let bestAvailable = Infinity;
 
@@ -239,11 +239,11 @@ export function DayTimeline({
                             </div>
                             {block.type === "task" && onClearTask && (
                               <button
-                                onClick={() => onClearTask(block.id)}
-                                className="shrink-0 rounded p-0.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
-                                title="Unassign from this day"
+                                onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
+                                className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                                title="Clear task (move to unassigned)"
                               >
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-4 w-4" />
                               </button>
                             )}
                           </div>
