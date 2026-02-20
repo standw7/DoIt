@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { NavWrapper } from "@/components/nav/nav-wrapper";
 import { useAuth } from "@/lib/auth-context";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading, login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,4 +40,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return <NavWrapper>{children}</NavWrapper>;
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </Suspense>
+  );
 }

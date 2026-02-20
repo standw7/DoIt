@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/lib/auth-context";
@@ -8,7 +8,7 @@ import { SettingsPanel } from "@/components/schedule/settings-panel";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const handledRef = useRef(false);
@@ -71,5 +71,17 @@ export default function SettingsPage() {
         onSetupCalendar={setupCalendar}
       />
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <SettingsPageInner />
+    </Suspense>
   );
 }
