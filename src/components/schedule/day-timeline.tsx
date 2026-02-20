@@ -491,7 +491,7 @@ export function DayTimeline({
                             className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
                             title="Clear task"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3 w-3" />
                           </button>
                         )}
                       </div>
