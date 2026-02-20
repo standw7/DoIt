@@ -18,6 +18,7 @@ interface RecurringTasksSectionProps {
   onCreate: (task: RecurringTaskInsert) => Promise<void>;
   onUpdate: (id: string, updates: Partial<RecurringTaskInsert>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  projectMap?: Record<string, string>;
 }
 
 export function RecurringTasksSection({
@@ -25,6 +26,7 @@ export function RecurringTasksSection({
   onCreate,
   onUpdate,
   onDelete,
+  projectMap = {},
 }: RecurringTasksSectionProps) {
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null);
   const [isOpen, setIsOpen] = useState(true);
@@ -96,6 +98,11 @@ export function RecurringTasksSection({
                         <Badge variant="secondary" className="text-xs shrink-0">
                           {formatMinutes(task.estimated_minutes)}
                         </Badge>
+                        {task.project_id && projectMap[task.project_id] && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            · {projectMap[task.project_id]}
+                          </span>
+                        )}
                       </div>
                       {task.end_date && (
                         <p className="text-xs text-muted-foreground mt-0.5">

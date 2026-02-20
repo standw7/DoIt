@@ -5,6 +5,7 @@ import * as api from "@/lib/api";
 import { useSettings } from "@/hooks/use-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useRecurringTasks } from "@/hooks/use-recurring-tasks";
+import { useProjects } from "@/hooks/use-projects";
 import { Task } from "@/lib/types";
 import { todayString, formatMinutes } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,13 @@ export default function TasksPage() {
     updateRecurringTask,
     deleteRecurringTask,
   } = useRecurringTasks();
+  const { projects } = useProjects();
+
+  const projectMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of projects) map[p.id] = p.name;
+    return map;
+  }, [projects]);
 
   const fetchAllTasks = useCallback(async () => {
     try {
@@ -225,6 +233,11 @@ export default function TasksPage() {
                               {task.priority}
                             </Badge>
                           )}
+                          {task.project_id && projectMap[task.project_id] && (
+                            <span className="text-xs text-muted-foreground">
+                              · {projectMap[task.project_id]}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -286,6 +299,7 @@ export default function TasksPage() {
         onCreate={createRecurringTask}
         onUpdate={updateRecurringTask}
         onDelete={deleteRecurringTask}
+        projectMap={projectMap}
       />
 
       {editingTask && (
