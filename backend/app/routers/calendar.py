@@ -34,6 +34,7 @@ class CalendarEventResponse(BaseModel):
     start: str
     end: str
     allDay: bool
+    color: str | None = None
 
 
 class SetupResponse(BaseModel):

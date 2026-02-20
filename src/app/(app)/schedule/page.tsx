@@ -164,9 +164,19 @@ export default function SchedulePage() {
   }
 
   async function handleClearTask(taskId: string) {
-    await updateTask(taskId, { day: null, status: "backlog", auto_assigned: false } as any);
+    // If the task has a calendar event, delete it first
+    const task = tasks.find((t) => t.id === taskId) ?? allTasks.find((t) => t.id === taskId);
+    if (task?.google_event_id) {
+      try {
+        await api.deleteCalendarEvent(task.google_event_id);
+      } catch {
+        // Calendar event might already be gone — continue
+      }
+    }
+    await updateTask(taskId, { day: null, status: "backlog", auto_assigned: false, google_event_id: null } as any);
     await fetchAllTasks();
-    toast.success("Task unassigned — ready for reassignment");
+    if (task?.google_event_id) await refetchEvents();
+    toast.success("Task cleared — ready for reassignment");
   }
 
   async function handleRemoveFromCalendar(task: Task) {

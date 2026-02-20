@@ -42,15 +42,23 @@ async def find_or_create_doit_calendar(access_token: str) -> str:
 # ── Events ──────────────────────────────────────────────────────
 
 
-async def get_all_calendar_ids(access_token: str) -> list[str]:
-    """List all calendar IDs the user has access to."""
+async def get_visible_calendars(access_token: str) -> list[dict]:
+    """List visible calendars with their colors.
+
+    Returns list of {"id": str, "color": str} for calendars marked
+    as visible (selected) in the user's Google Calendar UI.
+    """
     headers = await _headers(access_token)
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(CALENDAR_LIST_URL, headers=headers)
         resp.raise_for_status()
         calendars = resp.json().get("items", [])
-        return [cal["id"] for cal in calendars]
+        return [
+            {"id": cal["id"], "color": cal.get("backgroundColor", "")}
+            for cal in calendars
+            if cal.get("selected", False)
+        ]
 
 
 async def list_events(
@@ -58,10 +66,12 @@ async def list_events(
     calendar_id: str,
     time_min: str,
     time_max: str,
+    calendar_color: str = "",
 ) -> list[dict]:
     """Fetch events from a single calendar within a time range.
 
     time_min/time_max are date strings like "2026-02-19".
+    calendar_color is the hex background color of the parent calendar.
     Returns simplified event dicts.
     """
     headers = await _headers(access_token)
@@ -95,7 +105,7 @@ async def list_events(
             data = resp.json()
 
             for item in data.get("items", []):
-                events.append(_normalize_event(item))
+                events.append(_normalize_event(item, calendar_color))
 
             page_token = data.get("nextPageToken")
             if not page_token:
@@ -109,13 +119,15 @@ async def list_all_events(
     time_min: str,
     time_max: str,
 ) -> list[dict]:
-    """Fetch events from ALL user calendars within a time range."""
-    calendar_ids = await get_all_calendar_ids(access_token)
+    """Fetch events from all visible user calendars within a time range."""
+    calendars = await get_visible_calendars(access_token)
 
     all_events: list[dict] = []
-    for cal_id in calendar_ids:
+    for cal in calendars:
         try:
-            events = await list_events(access_token, cal_id, time_min, time_max)
+            events = await list_events(
+                access_token, cal["id"], time_min, time_max, cal["color"]
+            )
             all_events.extend(events)
         except Exception:
             # Skip calendars that error (e.g. permission issues)
@@ -210,7 +222,7 @@ async def delete_event(
 # ── Helpers ─────────────────────────────────────────────────────
 
 
-def _normalize_event(item: dict) -> dict:
+def _normalize_event(item: dict, calendar_color: str = "") -> dict:
     """Convert a Google Calendar event into our simplified format."""
     start_raw = item.get("start", {})
     end_raw = item.get("end", {})
@@ -223,4 +235,5 @@ def _normalize_event(item: dict) -> dict:
         "start": start_raw.get("dateTime") or start_raw.get("date", ""),
         "end": end_raw.get("dateTime") or end_raw.get("date", ""),
         "allDay": all_day,
+        "color": calendar_color or None,
     }
