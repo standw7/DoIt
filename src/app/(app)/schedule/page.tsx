@@ -14,11 +14,11 @@ import { ScheduleButton } from "@/components/schedule/schedule-button";
 import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
-import { getDayCapacity, pickBestDayWithInfo } from "@/lib/scheduler";
+import { getDayCapacity, pickBestDayWithInfo, rebalanceAutoAssigned } from "@/lib/scheduler";
 import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2, Wand2 } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw, Wand2 } from "lucide-react";
 import { Task } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -27,6 +27,7 @@ export default function SchedulePage() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [allTasksLoaded, setAllTasksLoaded] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [rebalancing, setRebalancing] = useState(false);
 
   const {
     settings,
@@ -34,7 +35,7 @@ export default function SchedulePage() {
     calendarConnected,
   } = useSettings();
 
-  const { tasks, loading: tasksLoading, updateTask } = useTasks({ day: selectedDate });
+  const { tasks, loading: tasksLoading, updateTask, refetch: refetchDayTasks } = useTasks({ day: selectedDate });
 
   // Fetch 14-day window so auto-assign has full calendar picture
   const futureStr = useMemo(() => format(addDays(new Date(), 14), "yyyy-MM-dd"), []);
@@ -154,6 +155,7 @@ export default function SchedulePage() {
     }
 
     await fetchAllTasks();
+    await refetchDayTasks();
     setAssigning(false);
     toast.success(`Auto-assigned ${assigned} task${assigned > 1 ? "s" : ""} to days`);
     if (overBudgetDays.size > 0) {
@@ -161,6 +163,38 @@ export default function SchedulePage() {
         `${overBudgetDays.size} day${overBudgetDays.size > 1 ? "s" : ""} exceed${overBudgetDays.size === 1 ? "s" : ""} your daily budget — too many tasks due with no earlier availability`,
         { duration: 6000 }
       );
+    }
+  }
+
+  async function handleRebalance() {
+    setRebalancing(true);
+    try {
+      const freshTasks = await api.getTasks();
+      const changes = rebalanceAutoAssigned({
+        tasks: freshTasks,
+        calendarEvents: allEvents,
+        workingHoursStart: settings.working_hours_start,
+        workingHoursEnd: settings.working_hours_end,
+        dailyBudget: settings.daily_minutes_budget,
+        skipWeekends: settings.skip_weekends,
+      });
+
+      for (const { id, newDay } of changes) {
+        await api.updateTask(id, { day: newDay });
+      }
+
+      await fetchAllTasks();
+      await refetchDayTasks();
+
+      if (changes.length > 0) {
+        toast.success(`Rebalanced ${changes.length} task${changes.length > 1 ? "s" : ""}`);
+      } else {
+        toast.info("Schedule is already optimal");
+      }
+    } catch {
+      toast.error("Failed to rebalance");
+    } finally {
+      setRebalancing(false);
     }
   }
 
@@ -199,6 +233,7 @@ export default function SchedulePage() {
 
   async function handleOverdueUpdate(id: string, updates: Record<string, any>) {
     await updateTask(id, updates);
+    await refetchDayTasks();
   }
 
   return (
@@ -249,22 +284,37 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Auto-assign unassigned tasks */}
-      {unassignedTasks.length > 0 && (
+      {/* Auto-assign + rebalance buttons */}
+      <div className="flex gap-2">
+        {unassignedTasks.length > 0 && (
+          <Button
+            onClick={handleAutoAssignAll}
+            disabled={assigning || rebalancing}
+            variant="outline"
+            className="flex-1"
+          >
+            {assigning ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="mr-2 h-4 w-4" />
+            )}
+            Assign {unassignedTasks.length} task{unassignedTasks.length > 1 ? "s" : ""}
+          </Button>
+        )}
         <Button
-          onClick={handleAutoAssignAll}
-          disabled={assigning}
+          onClick={handleRebalance}
+          disabled={assigning || rebalancing}
           variant="outline"
-          className="w-full"
+          className={unassignedTasks.length > 0 ? "" : "w-full"}
         >
-          {assigning ? (
+          {rebalancing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <Wand2 className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          Auto-assign {unassignedTasks.length} unassigned task{unassignedTasks.length > 1 ? "s" : ""} to days
+          Rebalance schedule
         </Button>
-      )}
+      </div>
 
       {/* Loading state */}
       {loading && (
