@@ -8,10 +8,10 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 const links = [
+  { href: "/schedule", label: "Schedule", icon: Clock },
   { href: "/today", label: "Today", icon: CalendarDays },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/schedule", label: "Schedule", icon: Clock },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/help", label: "Help", icon: CircleHelp },
 ];
