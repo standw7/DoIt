@@ -461,7 +461,7 @@ export function DayTimeline({
                         {block.type === "task" && onClearTask && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
-                            className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                            className="shrink-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                             title="Clear task"
                           >
                             <X className="h-3 w-3" />
@@ -488,7 +488,7 @@ export function DayTimeline({
                         {block.type === "task" && onClearTask && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
-                            className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                            className="shrink-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                             title="Clear task"
                           >
                             <X className="h-3 w-3" />
