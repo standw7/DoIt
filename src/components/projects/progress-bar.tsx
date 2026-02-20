@@ -6,7 +6,7 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ progress, className }: ProgressBarProps) {
-  const percent = Math.round(progress * 100);
+  const percent = Math.min(Math.round(progress), 100);
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
