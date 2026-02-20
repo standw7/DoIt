@@ -34,6 +34,7 @@ function timeToMinutes(time: string): number {
 function eventToTimeRange(
   event: CalendarEvent,
   date: string,
+  workStartMin: number,
   workEndMin: number
 ): { startMin: number; endMin: number } | null {
   if (event.allDay) return null;
@@ -42,13 +43,20 @@ function eventToTimeRange(
   const eventStart = parseISO(event.start);
   const eventEnd = parseISO(event.end);
 
-  const startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
+  let startMin = eventStart.getHours() * 60 + eventStart.getMinutes();
   let endMin = eventEnd.getHours() * 60 + eventEnd.getMinutes();
 
   // Handle midnight-crossing events: clamp to end of working hours
   if (endMin <= startMin) {
     endMin = workEndMin;
   }
+
+  // Clamp to working hours
+  startMin = Math.max(startMin, workStartMin);
+  endMin = Math.min(endMin, workEndMin);
+
+  // Skip if entirely outside working hours
+  if (startMin >= workEndMin || endMin <= workStartMin || endMin <= startMin) return null;
 
   return { startMin, endMin };
 }
@@ -117,7 +125,7 @@ export function DayTimeline({
     const eventBlocks: TimeBlock[] = [];
     const scheduledTaskEventIds = new Set<string>();
     for (const event of events) {
-      const range = eventToTimeRange(event, date, workEndMin);
+      const range = eventToTimeRange(event, date, workStartMin, workEndMin);
       if (!range) continue;
       const matchedTask = taskByEventId.get(event.id);
       if (matchedTask) {
@@ -247,18 +255,12 @@ export function DayTimeline({
   // Height per hour in rem
   const HOUR_HEIGHT = 3.5;
 
-  // Compute the full visible range including blocks that extend past work hours
+  // Timeline strictly covers working hours only
   const timelineRange = useMemo(() => {
-    let minMin = workStartMin;
-    let maxMin = workEndMin;
-    for (const b of blocks) {
-      if (b.startMin < minMin) minMin = b.startMin;
-      if (b.endMin > maxMin) maxMin = b.endMin;
-    }
-    const startHour = Math.floor(minMin / 60);
-    const endHour = Math.ceil(maxMin / 60);
+    const startHour = Math.floor(workStartMin / 60);
+    const endHour = Math.ceil(workEndMin / 60);
     return { startHour, endHour, startMin: startHour * 60, totalMinutes: (endHour - startHour) * 60 };
-  }, [blocks, workStartMin, workEndMin]);
+  }, [workStartMin, workEndMin]);
 
   const timelineHours = useMemo(() => {
     const result: number[] = [];
