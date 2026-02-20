@@ -285,7 +285,7 @@ export function DayTimeline({
 
     for (const block of blocks) {
       const naturalTopRem = ((block.startMin - timelineRange.startMin) / 60) * HOUR_HEIGHT;
-      const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 2.5);
+      const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 1.4);
       // Push down if this block would overlap the previous block's visual extent
       const topRem = Math.max(naturalTopRem, prevVisualBottom);
       result.push({ block, topRem, heightRem });
@@ -419,12 +419,15 @@ export function DayTimeline({
                   block.type === "task" &&
                   !tasks.find((t) => t.id === block.id)?.google_event_id;
                 const isDragging = draggingId === block.id;
+                const isCompact = heightRem < 2.2;
+                const timeStr = `${minutesToTimeStr(block.startMin)}–${minutesToTimeStr(block.endMin)}`;
 
                 return (
                   <div
                     key={block.id}
                     className={cn(
-                      "absolute left-1 right-1 rounded-md px-3 py-1 text-xs overflow-hidden z-10",
+                      "absolute left-1 right-1 rounded-md px-2 text-xs overflow-hidden z-10",
+                      isCompact ? "py-0.5" : "py-1",
                       !useCalendarColor && block.type === "event" &&
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
                       block.type === "task" &&
@@ -445,31 +448,54 @@ export function DayTimeline({
                     }}
                     onPointerDown={isDraggable ? (e) => handlePointerDown(e, block) : undefined}
                   >
-                    <div className="flex items-start justify-between gap-1 h-full">
-                      <div className="flex items-start gap-1 min-w-0">
-                        {isDraggable && (
-                          <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
+                    {isCompact ? (
+                      /* Single-line compact layout for short blocks */
+                      <div className="flex items-center justify-between gap-1 h-full">
+                        <div className="flex items-center gap-1 min-w-0">
+                          {isDraggable && (
+                            <GripVertical className="h-3 w-3 shrink-0 opacity-40" />
+                          )}
+                          <span className="font-medium truncate">{block.label}</span>
+                          <span className="opacity-70 shrink-0">{timeStr}</span>
+                        </div>
+                        {block.type === "task" && onClearTask && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
+                            className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                            title="Clear task"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         )}
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{block.label}</div>
-                          <div className="opacity-70">
-                            {minutesToTimeStr(block.startMin)}–{minutesToTimeStr(block.endMin)}
-                            {block.projectName && (
-                              <span className="ml-1.5">· {block.projectName}</span>
-                            )}
+                      </div>
+                    ) : (
+                      /* Two-line layout for blocks with enough height */
+                      <div className="flex items-start justify-between gap-1 h-full">
+                        <div className="flex items-start gap-1 min-w-0">
+                          {isDraggable && (
+                            <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{block.label}</div>
+                            <div className="opacity-70">
+                              {timeStr}
+                              {block.projectName && (
+                                <span className="ml-1.5">· {block.projectName}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        {block.type === "task" && onClearTask && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
+                            className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                            title="Clear task"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-                      {block.type === "task" && onClearTask && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
-                          className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
-                          title="Clear task (move to unassigned)"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 );
               })}
