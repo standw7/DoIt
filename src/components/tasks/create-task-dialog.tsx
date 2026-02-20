@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, ChevronDown } from "lucide-react";
 import { TaskInsert, TaskPriority, Task, CalendarEvent, RecurringTaskInsert, DAY_NAMES } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { pickBestDay } from "@/lib/scheduler";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -119,21 +118,9 @@ export function CreateTaskDialog({
 
     if (!dueDate) return;
 
-    let assignedDay = day || null;
+    // If user set a manual day use that, otherwise default to the due date
+    let assignedDay = day || dueDate;
     let autoAssigned = false;
-
-    if (!assignedDay) {
-      assignedDay = pickBestDay({
-        task: { estimated_minutes: minutes, due_date: dueDate, priority },
-        existingTasks,
-        calendarEvents,
-        workingHoursStart,
-        workingHoursEnd,
-        dailyBudget,
-        skipWeekends,
-      });
-      autoAssigned = true;
-    }
 
     try {
       await onCreate({
@@ -153,7 +140,7 @@ export function CreateTaskDialog({
       });
       reset();
       setOpen(false);
-      toast.success(autoAssigned ? `Task auto-assigned to ${assignedDay}` : "Task created");
+      toast.success("Task created");
     } catch {
       toast.error("Failed to create task");
     }
@@ -353,11 +340,7 @@ export function CreateTaskDialog({
             className="w-full"
             disabled={!name.trim() || !minutes || (!isRecurring && !dueDate)}
           >
-            {isRecurring
-              ? "Create Recurring Task"
-              : day
-                ? "Create Task"
-                : "Create & Auto-Assign"}
+            {isRecurring ? "Create Recurring Task" : "Create Task"}
           </Button>
         </form>
       </DialogContent>

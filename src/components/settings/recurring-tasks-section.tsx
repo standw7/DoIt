@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RecurringTask, DAY_NAMES } from "@/lib/types";
 import { formatMinutes } from "@/lib/utils";
-import { Repeat, Trash2, ChevronDown } from "lucide-react";
+import { Repeat, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { RecurringTaskDialog } from "./recurring-task-dialog";
 import { RecurringTaskInsert } from "@/lib/types";
 import { toast } from "sonner";
@@ -103,6 +103,14 @@ export function RecurringTasksSection({
                         </p>
                       )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => setEditingTask(task)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

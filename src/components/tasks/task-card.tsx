@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, X, CalendarPlus, CalendarMinus, Clock } from "lucide-react";
+import { MoreHorizontal, X, CalendarPlus, CalendarMinus, Clock, Pencil } from "lucide-react";
 import { Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { TaskDetailDialog } from "./task-detail-dialog";
@@ -39,15 +39,25 @@ export function TaskCard({ task, onToggleDone, onUpdate, onDelete, onAssignToDay
 
   return (
     <>
-      <Card className={cn("relative flex items-start gap-3 p-3 pr-9", isDone && "opacity-60")}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-red-500"
-          onClick={() => onDelete(task.id)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+      <Card className={cn("relative flex items-start gap-3 p-3 pr-20 md:pr-16", isDone && "opacity-60")}>
+        <div className="absolute right-1 top-1 flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-foreground"
+            onClick={() => setDetailOpen(true)}
+          >
+            <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-red-500"
+            onClick={() => onDelete(task.id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
         <Checkbox
           checked={isDone}
           onCheckedChange={() => onToggleDone(task)}

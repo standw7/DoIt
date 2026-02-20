@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, RefreshCw, Wand2 } from "lucide-react";
 import { Task } from "@/lib/types";
+import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { toast } from "sonner";
 
 export default function SchedulePage() {
@@ -29,6 +30,7 @@ export default function SchedulePage() {
   const [assigning, setAssigning] = useState(false);
   const [rebalancing, setRebalancing] = useState(false);
   const [taskPositions, setTaskPositions] = useState<TaskPosition[]>([]);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const {
     settings,
@@ -36,7 +38,7 @@ export default function SchedulePage() {
     calendarConnected,
   } = useSettings();
 
-  const { tasks, loading: tasksLoading, updateTask, refetch: refetchDayTasks } = useTasks({ day: selectedDate });
+  const { tasks, loading: tasksLoading, updateTask, deleteTask, refetch: refetchDayTasks } = useTasks({ day: selectedDate });
 
   // Fetch 14-day window so auto-assign has full calendar picture
   const futureStr = useMemo(() => format(addDays(new Date(), 14), "yyyy-MM-dd"), []);
@@ -336,6 +338,7 @@ export default function SchedulePage() {
           projectMap={projectMap}
           onClearTask={handleClearTask}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+          onEditTask={setEditingTask}
           onTaskPositionsChange={setTaskPositions}
         />
       )}
@@ -359,6 +362,23 @@ export default function SchedulePage() {
           tasks={tasks}
           taskPositions={taskPositions}
           onEventCreated={handleEventCreated}
+        />
+      )}
+
+      {/* Edit task dialog for schedule tasks */}
+      {editingTask && (
+        <TaskDetailDialog
+          task={editingTask}
+          open={true}
+          onOpenChange={(open) => { if (!open) setEditingTask(null); }}
+          onUpdate={(id, updates) => {
+            updateTask(id, updates);
+            setEditingTask(null);
+          }}
+          onDelete={(id) => {
+            deleteTask(id);
+            setEditingTask(null);
+          }}
         />
       )}
     </div>

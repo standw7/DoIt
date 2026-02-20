@@ -4,7 +4,7 @@ import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical, Pencil } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
 export interface TaskPosition {
@@ -23,6 +23,7 @@ interface DayTimelineProps {
   projectMap?: Record<string, string>;
   onClearTask?: (taskId: string) => void;
   onRemoveFromCalendar?: (task: Task) => void;
+  onEditTask?: (task: Task) => void;
   onTaskPositionsChange?: (positions: TaskPosition[]) => void;
 }
 
@@ -103,6 +104,7 @@ export function DayTimeline({
   projectMap = {},
   onClearTask,
   onRemoveFromCalendar,
+  onEditTask,
   onTaskPositionsChange,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
@@ -549,6 +551,15 @@ export function DayTimeline({
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {onEditTask && (
+                      <button
+                        onClick={() => onEditTask(task)}
+                        className="rounded p-1 text-muted-foreground hover:bg-muted"
+                        title="Edit task"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {onRemoveFromCalendar && task.google_event_id && (
                       <button
                         onClick={() => onRemoveFromCalendar(task)}
