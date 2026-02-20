@@ -16,6 +16,7 @@ import Link from "next/link";
 import { Task } from "@/lib/types";
 import * as api from "@/lib/api";
 import { format, addDays } from "date-fns";
+import { rebalanceAutoAssigned } from "@/lib/scheduler";
 import { toast } from "sonner";
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,6 +46,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }, [tasks]); // refetch when project tasks change
 
   const project = projects.find((p) => p.id === id);
+
+  async function handleCreateTask(task: any) {
+    await createTask(task);
+    try {
+      const freshTasks = await api.getTasks();
+      const changes = rebalanceAutoAssigned({
+        tasks: freshTasks,
+        calendarEvents,
+        workingHoursStart: settings.working_hours_start,
+        workingHoursEnd: settings.working_hours_end,
+        dailyBudget: settings.daily_minutes_budget,
+        skipWeekends: settings.skip_weekends,
+      });
+      for (const { id: taskId, newDay } of changes) {
+        await api.updateTask(taskId, { day: newDay });
+      }
+    } catch {
+      // rebalance failure is non-critical
+    }
+  }
 
   async function handleUnschedule(task: Task) {
     if (!task.google_event_id) return;
@@ -83,7 +104,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       <CreateTaskInline
         projectId={id}
-        onCreate={createTask}
+        onCreate={handleCreateTask}
         onCreateRecurring={createRecurringTask}
         existingTasks={allTasks}
         calendarEvents={calendarEvents}

@@ -234,3 +234,70 @@ export function getDayCapacity(
     freeMinutes: Math.max(0, workMinutes - eventMinutes - taskMinutes),
   };
 }
+
+/**
+ * Rebalance all auto-assigned planned tasks for optimal spread.
+ *
+ * 1. Separate tasks into "fixed" (manually assigned or done/skipped) and
+ *    "auto" (auto_assigned + planned).
+ * 2. Re-run the scheduler for each auto task in due-date order,
+ *    incrementally building the schedule from only fixed tasks.
+ * 3. Return the list of tasks whose assigned day changed.
+ */
+export function rebalanceAutoAssigned(input: {
+  tasks: Task[];
+  calendarEvents: CalendarEvent[];
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  dailyBudget: number;
+  skipWeekends?: boolean;
+}): { id: string; newDay: string }[] {
+  const { tasks, calendarEvents, workingHoursStart, workingHoursEnd, dailyBudget, skipWeekends } = input;
+
+  const autoTasks = tasks.filter(
+    (t) => t.auto_assigned && t.status === "planned" && t.day
+  );
+
+  if (autoTasks.length === 0) return [];
+
+  const fixedTasks = tasks.filter(
+    (t) => !(t.auto_assigned && t.status === "planned" && t.day)
+  );
+
+  // Sort by due date (earliest first = highest scheduling priority)
+  const sorted = [...autoTasks].sort((a, b) => {
+    if (!a.due_date && !b.due_date) return 0;
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return a.due_date.localeCompare(b.due_date);
+  });
+
+  const changes: { id: string; newDay: string }[] = [];
+  let currentTasks = [...fixedTasks];
+
+  for (const task of sorted) {
+    const bestDay = pickBestDay({
+      task: {
+        estimated_minutes: task.estimated_minutes ?? 30,
+        due_date: task.due_date,
+        priority: task.priority,
+        available_from: task.available_from,
+      },
+      existingTasks: currentTasks,
+      calendarEvents,
+      workingHoursStart,
+      workingHoursEnd,
+      dailyBudget,
+      skipWeekends,
+    });
+
+    if (bestDay !== task.day) {
+      changes.push({ id: task.id, newDay: bestDay });
+    }
+
+    // Add this task with its new assignment so subsequent tasks see it
+    currentTasks.push({ ...task, day: bestDay });
+  }
+
+  return changes;
+}

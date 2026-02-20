@@ -16,6 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ListChecks } from "lucide-react";
 import { todayString, getSuggestedTasks } from "@/lib/utils";
+import { rebalanceAutoAssigned } from "@/lib/scheduler";
 import { format, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 
@@ -63,6 +64,27 @@ function TodayContent() {
 
   function changeDate(newDate: string) {
     router.push(`/today?date=${newDate}`);
+  }
+
+  async function handleCreateTask(task: any) {
+    await createTask(task);
+    // Rebalance auto-assigned tasks for optimal spread
+    try {
+      const freshTasks = await api.getTasks();
+      const changes = rebalanceAutoAssigned({
+        tasks: freshTasks,
+        calendarEvents,
+        workingHoursStart: settings.working_hours_start,
+        workingHoursEnd: settings.working_hours_end,
+        dailyBudget: settings.daily_minutes_budget,
+        skipWeekends: settings.skip_weekends,
+      });
+      for (const { id, newDay } of changes) {
+        await api.updateTask(id, { day: newDay });
+      }
+    } catch {
+      // rebalance failure is non-critical
+    }
   }
 
   async function handleUnschedule(task: Task) {
@@ -120,7 +142,7 @@ function TodayContent() {
       <div className="mt-6">
         <CreateTaskInline
           day={date}
-          onCreate={createTask}
+          onCreate={handleCreateTask}
           existingTasks={allTasks}
           calendarEvents={calendarEvents}
           workingHoursStart={settings.working_hours_start}
