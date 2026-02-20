@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FolderKanban, Clock, ListTodo, Settings, CircleHelp } from "lucide-react";
+import { CalendarDays, FolderKanban, Clock, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -10,8 +10,6 @@ const links = [
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/schedule", label: "Schedule", icon: Clock },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/help", label: "Help", icon: CircleHelp },
 ];
 
 export function BottomNav() {
@@ -27,11 +25,11 @@ export function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-1 text-xs",
+                "flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium",
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-6 w-6" />
               {label}
             </Link>
           );
