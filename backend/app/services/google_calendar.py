@@ -1,5 +1,6 @@
 """Google Calendar API wrapper."""
 
+import asyncio
 from datetime import datetime, timezone
 
 import httpx
@@ -119,19 +120,22 @@ async def list_all_events(
     time_min: str,
     time_max: str,
 ) -> list[dict]:
-    """Fetch events from all visible user calendars within a time range."""
+    """Fetch events from all visible user calendars in parallel."""
     calendars = await get_visible_calendars(access_token)
 
-    all_events: list[dict] = []
-    for cal in calendars:
+    async def _fetch_one(cal: dict) -> list[dict]:
         try:
-            events = await list_events(
+            return await list_events(
                 access_token, cal["id"], time_min, time_max, cal["color"]
             )
-            all_events.extend(events)
         except Exception:
-            # Skip calendars that error (e.g. permission issues)
-            continue
+            return []
+
+    results = await asyncio.gather(*[_fetch_one(cal) for cal in calendars])
+
+    all_events: list[dict] = []
+    for batch in results:
+        all_events.extend(batch)
 
     # Deduplicate by event ID (same event can appear in multiple calendars)
     seen: set[str] = set()

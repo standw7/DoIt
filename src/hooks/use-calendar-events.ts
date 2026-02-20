@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { CalendarEvent } from "@/lib/types";
+import { getCachedCalendarEvents, invalidateCalendarCache, prefetchCalendarEvents } from "@/lib/prefetch";
 
 export function useCalendarEvents(start: string, end: string) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -13,7 +14,17 @@ export function useCalendarEvents(start: string, end: string) {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getCalendarEvents(start, end);
+      // Check prefetch cache first — if the layout already started this request,
+      // reuse it instead of making a duplicate call
+      const cached = getCachedCalendarEvents(start, end);
+      let data: CalendarEvent[];
+      if (cached?.data) {
+        data = cached.data;
+      } else if (cached?.promise) {
+        data = await cached.promise;
+      } else {
+        data = await api.getCalendarEvents(start, end);
+      }
       setEvents(data ?? []);
     } catch (err: unknown) {
       const msg = (err as { detail?: string })?.detail ?? "Failed to connect to calendar";
@@ -23,9 +34,25 @@ export function useCalendarEvents(start: string, end: string) {
     setLoading(false);
   }, [start, end]);
 
+  const refetch = useCallback(async () => {
+    invalidateCalendarCache();
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getCalendarEvents(start, end);
+      setEvents(data ?? []);
+      // Re-warm the cache for future navigations
+      prefetchCalendarEvents(start, end);
+    } catch (err: unknown) {
+      const msg = (err as { detail?: string })?.detail ?? "Failed to connect to calendar";
+      setError(msg);
+    }
+    setLoading(false);
+  }, [start, end]);
+
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
-  return { events, loading, error, refetch: fetchEvents };
+  return { events, loading, error, refetch };
 }
