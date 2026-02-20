@@ -111,16 +111,15 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       continue;
     }
 
-    // Calculate available time
-    const eventMinutes = getDayEventMinutes(dateStr, calendarEvents);
+    // Calculate available time (based on task load only — events don't reduce task budget)
     const taskMinutes = getDayTaskMinutes(dateStr, existingTasks);
 
     const totalWorkAvailable = isToday
       ? Math.min(workMinutes, getRemainingWorkMinutesToday(workingHoursEnd))
       : workMinutes;
-    const freeMinutes = Math.max(0, totalWorkAvailable - eventMinutes - taskMinutes);
+    const freeMinutes = Math.max(0, totalWorkAvailable - taskMinutes);
 
-    // Skip if the task physically doesn't fit in working hours
+    // Skip if the task wouldn't fit in remaining working hours
     if (task.estimated_minutes > freeMinutes) {
       continue;
     }

@@ -84,15 +84,6 @@ export function DayTimeline({
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
 
-  const hours = useMemo(() => {
-    const startHour = Math.floor(workStartMin / 60);
-    const endHour = Math.ceil(workEndMin / 60);
-    const result: number[] = [];
-    for (let h = startHour; h < endHour; h++) {
-      result.push(h);
-    }
-    return result;
-  }, [workStartMin, workEndMin]);
 
   const { blocks, overflowTasks } = useMemo(() => {
     // Map google_event_id → task so we can identify task events on the calendar
@@ -202,6 +193,30 @@ export function DayTimeline({
     return { blocks: allBlocks, overflowTasks };
   }, [events, tasks, date, workStartMin, workEndMin, projectMap]);
 
+  // Height per hour in rem
+  const HOUR_HEIGHT = 3.5;
+
+  // Compute the full visible range including blocks that extend past work hours
+  const timelineRange = useMemo(() => {
+    let minMin = workStartMin;
+    let maxMin = workEndMin;
+    for (const b of blocks) {
+      if (b.startMin < minMin) minMin = b.startMin;
+      if (b.endMin > maxMin) maxMin = b.endMin;
+    }
+    const startHour = Math.floor(minMin / 60);
+    const endHour = Math.ceil(maxMin / 60);
+    return { startHour, endHour, startMin: startHour * 60, totalMinutes: (endHour - startHour) * 60 };
+  }, [blocks, workStartMin, workEndMin]);
+
+  const timelineHours = useMemo(() => {
+    const result: number[] = [];
+    for (let h = timelineRange.startHour; h <= timelineRange.endHour; h++) {
+      result.push(h);
+    }
+    return result;
+  }, [timelineRange]);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -212,71 +227,86 @@ export function DayTimeline({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            {hours.map((hour) => (
-              <div
-                key={hour}
-                className="flex items-start border-t border-border/50"
-                style={{ minHeight: "3rem" }}
-              >
-                <span className="w-16 shrink-0 pr-3 pt-1 text-right text-xs text-muted-foreground">
-                  {format(new Date(2000, 0, 1, hour), "h a")}
-                </span>
-                <div className="relative flex-1 min-h-12">
-                  {blocks
-                    .filter((b) => Math.floor(b.startMin / 60) === hour)
-                    .map((block) => {
-                      const heightRatio = Math.min(
-                        block.durationMinutes / 60,
-                        4
-                      );
-                      const useCalendarColor = block.type === "event" && block.color;
-                      return (
-                        <div
-                          key={block.id}
-                          className={cn(
-                            "mb-1 rounded-md px-3 py-1.5 text-xs",
-                            !useCalendarColor && block.type === "event" &&
-                              "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
-                            block.type === "task" &&
-                              "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
-                          )}
-                          style={{
-                            minHeight: `${Math.max(heightRatio * 3, 1.75)}rem`,
-                            ...(useCalendarColor
-                              ? {
-                                  backgroundColor: block.color,
-                                  color: getContrastColor(block.color!),
-                                }
-                              : {}),
-                          }}
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="min-w-0">
-                              <div className="font-medium">{block.label}</div>
-                              <div className="opacity-70">
-                                {formatMinutes(block.durationMinutes)}
-                                {block.projectName && (
-                                  <span className="ml-1.5">· {block.projectName}</span>
-                                )}
-                              </div>
-                            </div>
-                            {block.type === "task" && onClearTask && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
-                                className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
-                                title="Clear task (move to unassigned)"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+          <div className="flex">
+            {/* Hour labels column */}
+            <div className="w-16 shrink-0">
+              {timelineHours.map((hour) => (
+                <div
+                  key={hour}
+                  style={{ height: `${HOUR_HEIGHT}rem` }}
+                  className="flex items-start justify-end pr-3 pt-0.5"
+                >
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(2000, 0, 1, hour % 24), "h a")}
+                  </span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Timeline blocks column — absolute positioned */}
+            <div
+              className="relative flex-1 border-l border-border/50"
+              style={{ height: `${(timelineRange.endHour - timelineRange.startHour) * HOUR_HEIGHT}rem` }}
+            >
+              {/* Hour grid lines */}
+              {timelineHours.slice(0, -1).map((hour, i) => (
+                <div
+                  key={hour}
+                  className="absolute left-0 right-0 border-t border-border/30"
+                  style={{ top: `${i * HOUR_HEIGHT}rem` }}
+                />
+              ))}
+
+              {/* Blocks */}
+              {blocks.map((block) => {
+                const topRem = ((block.startMin - timelineRange.startMin) / 60) * HOUR_HEIGHT;
+                const heightRem = Math.max((block.durationMinutes / 60) * HOUR_HEIGHT, 1.5);
+                const useCalendarColor = block.type === "event" && block.color;
+                return (
+                  <div
+                    key={block.id}
+                    className={cn(
+                      "absolute left-1 right-1 rounded-md px-3 py-1 text-xs overflow-hidden z-10",
+                      !useCalendarColor && block.type === "event" &&
+                        "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
+                      block.type === "task" &&
+                        "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                    )}
+                    style={{
+                      top: `${topRem}rem`,
+                      height: `${heightRem}rem`,
+                      ...(useCalendarColor
+                        ? {
+                            backgroundColor: block.color,
+                            color: getContrastColor(block.color!),
+                          }
+                        : {}),
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-1 h-full">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{block.label}</div>
+                        <div className="opacity-70">
+                          {formatMinutes(block.durationMinutes)}
+                          {block.projectName && (
+                            <span className="ml-1.5">· {block.projectName}</span>
+                          )}
+                        </div>
+                      </div>
+                      {block.type === "task" && onClearTask && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onClearTask(block.id); }}
+                          className="shrink-0 rounded-full p-0.5 bg-red-500/15 text-red-600 hover:bg-red-500/30 dark:text-red-400 dark:hover:bg-red-500/30"
+                          title="Clear task (move to unassigned)"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>
