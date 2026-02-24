@@ -555,9 +555,9 @@ export function DayTimeline({
                       !useCalendarColor && block.type === "event" &&
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
                       block.type === "task" && isScheduled &&
-                        "text-white",
+                        "text-gray-900",
                       block.type === "task" && !isScheduled &&
-                        "text-white",
+                        "text-gray-900",
                       isDraggable && "cursor-grab",
                       isDragging && "cursor-grabbing ring-2 ring-green-500 shadow-lg z-20"
                     )}
