@@ -140,7 +140,7 @@ export default function TasksPage() {
     );
     try {
       await api.updateTask(task.id, { status: newStatus });
-      await runRebalance();
+      await fetchAllTasks();
     } catch {
       setAllTasks(prev);
     }

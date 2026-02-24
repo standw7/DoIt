@@ -247,7 +247,7 @@ export default function SchedulePage() {
     const newStatus = task.status === "done" ? "planned" : "done";
     await updateTask(task.id, { status: newStatus });
     await refetchDayTasks();
-    await handleRebalance();
+    await fetchAllTasks();
   }
 
   async function handleClearTask(taskId: string) {
