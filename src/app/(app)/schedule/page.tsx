@@ -247,7 +247,7 @@ export default function SchedulePage() {
     const newStatus = task.status === "done" ? "planned" : "done";
     await updateTask(task.id, { status: newStatus });
     await refetchDayTasks();
-    await fetchAllTasks();
+    await handleRebalance();
   }
 
   async function handleClearTask(taskId: string) {
@@ -256,15 +256,14 @@ export default function SchedulePage() {
     if (task?.google_event_id) {
       removeEvent(task.google_event_id);
     }
-    // Update task in background — no await chain that blocks UI
-    updateTask(taskId, { day: null, status: "backlog", auto_assigned: false, google_event_id: null } as any);
-    fetchAllTasks();
+    await updateTask(taskId, { day: null, status: "backlog", auto_assigned: false, google_event_id: null } as any);
     toast.success("Task cleared — ready for reassignment");
     // Delete calendar event in background
     if (task?.google_event_id) {
       api.deleteCalendarEvent(task.google_event_id).catch(() => {});
       refetchEvents();
     }
+    await handleRebalance();
   }
 
   async function handleRemoveFromCalendar(task: Task) {
@@ -293,6 +292,7 @@ export default function SchedulePage() {
     try {
       await api.upsertDailyBudgetOverride(selectedDate, minutes);
       setDateOverrides((prev) => new Map(prev).set(selectedDate, minutes));
+      await handleRebalance();
     } catch {
       toast.error("Failed to set budget override");
     }
@@ -306,6 +306,7 @@ export default function SchedulePage() {
         next.delete(selectedDate);
         return next;
       });
+      await handleRebalance();
     } catch {
       toast.error("Failed to clear budget override");
     }
@@ -314,6 +315,7 @@ export default function SchedulePage() {
   async function handleOverdueUpdate(id: string, updates: Record<string, any>) {
     await updateTask(id, updates);
     await refetchDayTasks();
+    await handleRebalance();
   }
 
   return (
