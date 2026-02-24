@@ -10,6 +10,14 @@ const DEFAULT_SETTINGS = {
   daily_minutes_budget: 120,
   auto_assign_enabled: true,
   skip_weekends: false,
+  custom_weekly_budgets_enabled: false,
+  budget_monday: null as number | null,
+  budget_tuesday: null as number | null,
+  budget_wednesday: null as number | null,
+  budget_thursday: null as number | null,
+  budget_friday: null as number | null,
+  budget_saturday: null as number | null,
+  budget_sunday: null as number | null,
   doit_calendar_id: null as string | null,
 };
 
@@ -61,6 +69,14 @@ export function useSettings() {
     daily_minutes_budget: settings?.daily_minutes_budget ?? DEFAULT_SETTINGS.daily_minutes_budget,
     auto_assign_enabled: settings?.auto_assign_enabled ?? DEFAULT_SETTINGS.auto_assign_enabled,
     skip_weekends: settings?.skip_weekends ?? DEFAULT_SETTINGS.skip_weekends,
+    custom_weekly_budgets_enabled: settings?.custom_weekly_budgets_enabled ?? DEFAULT_SETTINGS.custom_weekly_budgets_enabled,
+    budget_monday: settings?.budget_monday ?? null,
+    budget_tuesday: settings?.budget_tuesday ?? null,
+    budget_wednesday: settings?.budget_wednesday ?? null,
+    budget_thursday: settings?.budget_thursday ?? null,
+    budget_friday: settings?.budget_friday ?? null,
+    budget_saturday: settings?.budget_saturday ?? null,
+    budget_sunday: settings?.budget_sunday ?? null,
     doit_calendar_id: settings?.doit_calendar_id ?? null,
   };
 

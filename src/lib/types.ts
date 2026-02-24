@@ -57,6 +57,14 @@ export interface UserSettings {
   daily_minutes_budget: number;
   auto_assign_enabled: boolean;
   skip_weekends: boolean;
+  custom_weekly_budgets_enabled: boolean;
+  budget_monday: number | null;
+  budget_tuesday: number | null;
+  budget_wednesday: number | null;
+  budget_thursday: number | null;
+  budget_friday: number | null;
+  budget_saturday: number | null;
+  budget_sunday: number | null;
   doit_calendar_id: string | null;
   google_refresh_token: string | null;
   created_at: string;
@@ -73,6 +81,15 @@ export interface CalendarEvent {
   end: string;
   allDay: boolean;
   color?: string;
+}
+
+export interface DailyBudgetOverride {
+  id: string;
+  user_id: string;
+  date: string;
+  minutes_budget: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;

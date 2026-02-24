@@ -12,6 +12,7 @@ import type {
   UserSettings,
   UserSettingsUpdate,
   CalendarEvent,
+  DailyBudgetOverride,
 } from "./types";
 
 const BASE_URL = "/api/backend";
@@ -241,4 +242,25 @@ export async function exchangeGoogleCode(code: string): Promise<void> {
 
 export async function disconnectGoogle(): Promise<void> {
   return request("/auth/google", { method: "DELETE" });
+}
+
+// ── Daily Budget Overrides ──────────────────────────────────
+
+export async function getDailyBudgetOverride(date: string): Promise<DailyBudgetOverride | null> {
+  return request(`/daily-budget-overrides/?date=${date}`);
+}
+
+export async function getDailyBudgetOverridesRange(start: string, end: string): Promise<DailyBudgetOverride[]> {
+  return request(`/daily-budget-overrides/range?start=${start}&end=${end}`);
+}
+
+export async function upsertDailyBudgetOverride(date: string, minutesBudget: number): Promise<DailyBudgetOverride> {
+  return request("/daily-budget-overrides/", {
+    method: "PUT",
+    body: JSON.stringify({ date, minutes_budget: minutesBudget }),
+  });
+}
+
+export async function deleteDailyBudgetOverride(date: string): Promise<void> {
+  return request(`/daily-budget-overrides/${date}`, { method: "DELETE" });
 }
