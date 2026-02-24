@@ -266,6 +266,11 @@ export default function TasksPage() {
                               {task.priority}
                             </Badge>
                           )}
+                          {task.prefer_weekend && (
+                            <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
+                              weekend
+                            </Badge>
+                          )}
                           {task.project_id && projectMap[task.project_id] && (
                             <span className="text-xs text-muted-foreground">
                               · {projectMap[task.project_id]}

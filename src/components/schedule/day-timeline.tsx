@@ -641,6 +641,9 @@ export function DayTimeline({
                         · {projectMap[task.project_id]}
                       </span>
                     )}
+                    {task.prefer_weekend && (
+                      <span className="ml-1.5 text-xs text-purple-500">weekend</span>
+                    )}
                     {task.google_event_id && (
                       <span className="ml-1.5 text-xs text-blue-500">on calendar</span>
                     )}

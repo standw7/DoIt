@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, ChevronDown } from "lucide-react";
 import { TaskInsert, TaskPriority, Task, CalendarEvent, RecurringTaskInsert, DAY_NAMES } from "@/lib/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -69,6 +70,7 @@ export function CreateTaskDialog({
   const [availableDaysBefore, setAvailableDaysBefore] = useState<string>("");
   const [endDate, setEndDate] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("none");
+  const [preferWeekend, setPreferWeekend] = useState(false);
 
   function reset() {
     setName("");
@@ -84,6 +86,7 @@ export function CreateTaskDialog({
     setAvailableDaysBefore("");
     setEndDate("");
     setSelectedProjectId("none");
+    setPreferWeekend(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -137,6 +140,7 @@ export function CreateTaskDialog({
         sort_order: 0,
         google_event_id: null,
         auto_assigned: autoAssigned,
+        prefer_weekend: preferWeekend,
       });
       reset();
       setOpen(false);
@@ -291,6 +295,19 @@ export function CreateTaskDialog({
               ))}
             </div>
           </div>
+
+          {!isRecurring && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="prefer-weekend-create"
+                checked={preferWeekend}
+                onCheckedChange={(checked) => setPreferWeekend(checked === true)}
+              />
+              <Label htmlFor="prefer-weekend-create" className="text-sm font-normal cursor-pointer">
+                Weekend task — prefer scheduling on Sat/Sun
+              </Label>
+            </div>
+          )}
 
           {!isRecurring && (
             <div>

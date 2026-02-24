@@ -165,6 +165,7 @@ export default function SchedulePage() {
           due_date: task.due_date,
           priority: task.priority,
           available_from: task.available_from,
+          prefer_weekend: task.prefer_weekend,
         },
         existingTasks: currentTasks,
         calendarEvents: allEvents,

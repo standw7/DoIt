@@ -35,6 +35,7 @@ class Task(Base):
         String(36), ForeignKey("recurring_tasks.id", ondelete="SET NULL"), nullable=True
     )
     available_from: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    prefer_weekend: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

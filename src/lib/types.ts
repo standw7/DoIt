@@ -29,6 +29,7 @@ export interface Task {
   auto_assigned: boolean;
   recurring_task_id: string | null;
   available_from: string | null;
+  prefer_weekend: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -39,11 +40,12 @@ export interface ProjectWithProgress extends Project {
   done_count: number;
 }
 
-export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "google_event_id" | "auto_assigned" | "recurring_task_id" | "available_from"> & {
+export type TaskInsert = Omit<Task, "id" | "user_id" | "created_at" | "updated_at" | "google_event_id" | "auto_assigned" | "recurring_task_id" | "available_from" | "prefer_weekend"> & {
   google_event_id?: string | null;
   auto_assigned?: boolean;
   recurring_task_id?: string | null;
   available_from?: string | null;
+  prefer_weekend?: boolean;
 };
 export type TaskUpdate = Partial<TaskInsert>;
 export type ProjectInsert = Omit<Project, "id" | "user_id" | "created_at" | "updated_at">;

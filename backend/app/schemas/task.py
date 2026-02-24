@@ -19,6 +19,7 @@ class TaskCreate(BaseModel):
     auto_assigned: bool = False
     recurring_task_id: str | None = None
     available_from: str | None = None
+    prefer_weekend: bool = False
 
 
 class TaskUpdate(BaseModel):
@@ -37,6 +38,7 @@ class TaskUpdate(BaseModel):
     auto_assigned: bool | None = None
     recurring_task_id: str | None = None
     available_from: str | None = None
+    prefer_weekend: bool | None = None
 
 
 class TaskResponse(BaseModel):
@@ -57,6 +59,7 @@ class TaskResponse(BaseModel):
     auto_assigned: bool
     recurring_task_id: str | None = None
     available_from: str | None = None
+    prefer_weekend: bool
     created_at: datetime
     updated_at: datetime
 

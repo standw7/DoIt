@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Task, TaskPriority } from "@/lib/types";
 
 interface ProjectOption {
@@ -31,6 +32,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete,
   const [dueDate, setDueDate] = useState(task.due_date ?? "");
   const [day, setDay] = useState(task.day ?? "");
   const [projectId, setProjectId] = useState(task.project_id ?? "none");
+  const [preferWeekend, setPreferWeekend] = useState(task.prefer_weekend);
 
   useEffect(() => {
     setName(task.name);
@@ -40,6 +42,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete,
     setDueDate(task.due_date ?? "");
     setDay(task.day ?? "");
     setProjectId(task.project_id ?? "none");
+    setPreferWeekend(task.prefer_weekend);
   }, [task]);
 
   function handleSave() {
@@ -52,6 +55,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete,
       day: day || null,
       project_id: projectId === "none" ? null : projectId,
       status: day && task.status === "backlog" ? "planned" : task.status,
+      prefer_weekend: preferWeekend,
     });
     onOpenChange(false);
   }
@@ -112,6 +116,16 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdate, onDelete,
               </Select>
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="prefer-weekend"
+              checked={preferWeekend}
+              onCheckedChange={(checked) => setPreferWeekend(checked === true)}
+            />
+            <Label htmlFor="prefer-weekend" className="text-sm font-normal cursor-pointer">
+              Weekend task — prefer scheduling on Sat/Sun
+            </Label>
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleSave} className="flex-1">Save</Button>
             <Button variant="destructive" onClick={() => { onDelete(task.id); onOpenChange(false); }}>Delete</Button>

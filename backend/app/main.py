@@ -30,6 +30,12 @@ def _run_migrations():
                     conn.execute(text(
                         f"ALTER TABLE user_settings ADD COLUMN {col} INTEGER"
                     ))
+        if "tasks" in inspector.get_table_names():
+            columns = {c["name"] for c in inspector.get_columns("tasks")}
+            if "prefer_weekend" not in columns:
+                conn.execute(text(
+                    "ALTER TABLE tasks ADD COLUMN prefer_weekend BOOLEAN DEFAULT 0 NOT NULL"
+                ))
 
 
 @asynccontextmanager

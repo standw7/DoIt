@@ -13,7 +13,7 @@ export interface WeeklyBudgets {
 }
 
 interface SchedulerInput {
-  task: { estimated_minutes: number; due_date: string | null; priority: "low" | "medium" | "high"; available_from?: string | null };
+  task: { estimated_minutes: number; due_date: string | null; priority: "low" | "medium" | "high"; available_from?: string | null; prefer_weekend?: boolean };
   existingTasks: Task[];
   calendarEvents: CalendarEvent[];
   workingHoursStart: string;
@@ -150,9 +150,10 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     const dateStr = format(candidateDate, "yyyy-MM-dd");
     const isToday = dateStr === todayStr;
 
-    // Skip weekends if setting is enabled
+    // Skip weekends if setting is enabled — but allow weekend tasks through
     const dayOfWeek = candidateDate.getDay();
-    if (skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    if (skipWeekends && isWeekend && !task.prefer_weekend) {
       continue;
     }
 
@@ -220,12 +221,22 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       priorityScore = 40;
     }
 
-    // Weights: budget dominates (hard gate), then spread, then urgency/priority as tiebreakers
+    // --- Weekend preference: strongly prefer weekends for prefer_weekend tasks,
+    // and mildly penalize weekends for normal tasks when weekends are allowed ---
+    let weekendScore = 50;
+    if (task.prefer_weekend) {
+      weekendScore = isWeekend ? 150 : 0;
+    } else if (isWeekend) {
+      weekendScore = 20; // mild penalty — prefer weekdays for normal tasks
+    }
+
+    // Weights: budget dominates (hard gate), then spread/weekend, then urgency/priority as tiebreakers
     const total =
-      budgetScore * 0.50 +
-      spreadScore * 0.25 +
-      urgencyScore * 0.15 +
-      priorityScore * 0.10;
+      budgetScore * 0.40 +
+      spreadScore * 0.20 +
+      weekendScore * (task.prefer_weekend ? 0.25 : 0.05) +
+      urgencyScore * 0.10 +
+      priorityScore * 0.05;
 
     scores.push({
       date: dateStr,
@@ -334,6 +345,7 @@ export function rebalanceAutoAssigned(input: {
         due_date: task.due_date,
         priority: task.priority,
         available_from: task.available_from,
+        prefer_weekend: task.prefer_weekend,
       },
       existingTasks: currentTasks,
       calendarEvents,
