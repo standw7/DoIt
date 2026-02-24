@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 from app.config import settings
 from app.database import Base, engine
 import app.models  # noqa: F401 — register all models with Base.metadata
-from app.routers import auth, calendar, projects, recurring_tasks, settings as settings_router, tasks
+from app.routers import auth, calendar, daily_budget_overrides, projects, recurring_tasks, settings as settings_router, tasks
 
 
 def _run_migrations():
@@ -69,6 +69,7 @@ app.include_router(projects.router)
 app.include_router(recurring_tasks.router)
 app.include_router(settings_router.router)
 app.include_router(calendar.router)
+app.include_router(daily_budget_overrides.router)
 
 
 @app.get("/health")
