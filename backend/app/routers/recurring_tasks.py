@@ -159,6 +159,7 @@ def generate_recurring_instances(
                         auto_assigned=True,
                         recurring_task_id=template.id,
                         available_from=available_from,
+                        prefer_weekend=template.prefer_weekend,
                     )
                     db.add(task)
                     created_tasks.append(task)

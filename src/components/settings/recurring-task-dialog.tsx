@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { RecurringTask, RecurringTaskInsert, RecurringTaskUpdate, TaskPriority, DAY_NAMES } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
   const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
   const [availableDaysBefore, setAvailableDaysBefore] = useState<string>("");
   const [endDate, setEndDate] = useState("");
+  const [preferWeekend, setPreferWeekend] = useState(false);
 
   function reset() {
     setName("");
@@ -57,6 +59,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
     setRecurrenceDay(0);
     setAvailableDaysBefore("");
     setEndDate("");
+    setPreferWeekend(false);
   }
 
   // Pre-fill form fields when editingTask changes
@@ -76,6 +79,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
       setRecurrenceDay(editingTask.recurrence_day);
       setAvailableDaysBefore(editingTask.available_days_before != null ? String(editingTask.available_days_before) : "");
       setEndDate(editingTask.end_date ?? "");
+      setPreferWeekend(editingTask.prefer_weekend);
     } else {
       reset();
     }
@@ -99,6 +103,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
           start_date: editingTask.start_date,
           end_date: endDate || null,
           active: editingTask.active,
+          prefer_weekend: preferWeekend,
         });
         setDialogOpen(false);
         toast.success("Recurring task updated");
@@ -114,6 +119,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
           active: true,
+          prefer_weekend: preferWeekend,
         });
         reset();
         setDialogOpen(false);
@@ -247,6 +253,17 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
             placeholder="Notes..."
             rows={2}
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="prefer-weekend-recurring"
+            checked={preferWeekend}
+            onCheckedChange={(checked) => setPreferWeekend(checked === true)}
+          />
+          <Label htmlFor="prefer-weekend-recurring" className="text-sm font-normal cursor-pointer">
+            Weekend task — prefer scheduling on Sat/Sun
+          </Label>
         </div>
 
         <Button type="submit" className="w-full" disabled={!name.trim() || !minutes}>

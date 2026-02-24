@@ -14,6 +14,7 @@ class RecurringTaskCreate(BaseModel):
     start_date: str
     end_date: str | None = None
     active: bool = True
+    prefer_weekend: bool = False
 
 
 class RecurringTaskUpdate(BaseModel):
@@ -27,6 +28,7 @@ class RecurringTaskUpdate(BaseModel):
     start_date: str | None = None
     end_date: str | None = None
     active: bool | None = None
+    prefer_weekend: bool | None = None
 
 
 class RecurringTaskResponse(BaseModel):
@@ -42,6 +44,7 @@ class RecurringTaskResponse(BaseModel):
     start_date: str
     end_date: str | None = None
     active: bool
+    prefer_weekend: bool
     created_at: datetime
     updated_at: datetime
 

@@ -109,6 +109,7 @@ export interface RecurringTask {
   start_date: string;
   end_date: string | null;
   active: boolean;
+  prefer_weekend: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -109,6 +109,7 @@ export function CreateTaskDialog({
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
           active: true,
+          prefer_weekend: preferWeekend,
         });
         reset();
         setOpen(false);
@@ -296,18 +297,16 @@ export function CreateTaskDialog({
             </div>
           </div>
 
-          {!isRecurring && (
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="prefer-weekend-create"
-                checked={preferWeekend}
-                onCheckedChange={(checked) => setPreferWeekend(checked === true)}
-              />
-              <Label htmlFor="prefer-weekend-create" className="text-sm font-normal cursor-pointer">
-                Weekend task — prefer scheduling on Sat/Sun
-              </Label>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="prefer-weekend-create"
+              checked={preferWeekend}
+              onCheckedChange={(checked) => setPreferWeekend(checked === true)}
+            />
+            <Label htmlFor="prefer-weekend-create" className="text-sm font-normal cursor-pointer">
+              Weekend task — prefer scheduling on Sat/Sun
+            </Label>
+          </div>
 
           {!isRecurring && (
             <div>
