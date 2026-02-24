@@ -633,8 +633,9 @@ export function DayTimeline({
       </Card>
 
       {(() => {
-        const activeTasks = tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
-        if (activeTasks.length === 0 && !effectiveBudget) return null;
+        const visibleTasks = tasks.filter((t) => t.status !== "skipped");
+        const activeTasks = visibleTasks.filter((t) => t.status !== "done");
+        if (visibleTasks.length === 0 && !effectiveBudget) return null;
         // Build lookup for task time ranges from all blocks
         const blockTimeMap = new Map<string, { startMin: number; endMin: number }>();
         for (const b of blocks) {
@@ -645,6 +646,11 @@ export function DayTimeline({
             <CardHeader>
               <CardTitle className="text-base">
                 Tasks on this day ({activeTasks.length})
+                {visibleTasks.length > activeTasks.length && (
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                    · {visibleTasks.length - activeTasks.length} done
+                  </span>
+                )}
               </CardTitle>
               {effectiveBudget !== undefined && onBudgetOverride && (
                 <BudgetOverrideField
@@ -656,22 +662,26 @@ export function DayTimeline({
               )}
             </CardHeader>
             <CardContent className="space-y-2">
-              {activeTasks.map((task) => {
+              {visibleTasks.map((task) => {
                 const timeRange = blockTimeMap.get(task.id);
+                const isDone = task.status === "done";
                 return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+                    isDone && "opacity-60"
+                  )}
                 >
                   {onToggleDone && (
                     <Checkbox
-                      checked={false}
+                      checked={isDone}
                       onCheckedChange={() => onToggleDone(task)}
                       className="h-5 w-5 shrink-0"
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <span className="font-medium">{task.name}</span>
+                    <span className={cn("font-medium", isDone && "line-through")}>{task.name}</span>
                     {timeRange && (
                       <span className="ml-2 text-muted-foreground">
                         {minutesToTimeStr(timeRange.startMin)}–{minutesToTimeStr(timeRange.endMin)}
