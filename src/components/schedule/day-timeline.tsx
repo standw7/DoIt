@@ -191,7 +191,7 @@ export function DayTimeline({
   }
 
   // Compute blocks from events and auto-placed tasks
-  const { autoBlocks, eventBlocks, overflowTasks } = useMemo(() => {
+  const { autoBlocks, eventBlocks, overflowTasks, scheduledTaskIds } = useMemo(() => {
     // Map google_event_id → task so we can identify task events on the calendar
     const taskByEventId = new Map<string, Task>();
     for (const t of tasks) {
@@ -230,12 +230,13 @@ export function DayTimeline({
       }
     }
 
-    // Collect unscheduled tasks to auto-stack
+    // Collect unscheduled tasks to auto-stack.
+    // Include tasks whose google_event_id doesn't match any fetched event
+    // (orphaned link — event may have been deleted or calendar not fetched).
     const unscheduled = tasks
       .filter(
         (t) =>
           t.status === "planned" &&
-          !t.google_event_id &&
           !scheduledTaskEventIds.has(t.id)
       )
       .sort((a, b) => (a.estimated_minutes ?? 30) - (b.estimated_minutes ?? 30));
@@ -291,7 +292,7 @@ export function DayTimeline({
       }
     }
 
-    return { autoBlocks: taskBlocks, eventBlocks, overflowTasks };
+    return { autoBlocks: taskBlocks, eventBlocks, overflowTasks, scheduledTaskIds: scheduledTaskEventIds };
   }, [events, tasks, date, workStartMin, workEndMin, projectMap]);
 
   // Apply drag overrides to task blocks
@@ -316,18 +317,12 @@ export function DayTimeline({
 
   useEffect(() => {
     if (!onTaskPositionsChangeRef.current) return;
-    const unscheduledTaskBlocks = taskBlocks.filter(
-      (b) => b.type === "task" && !tasks.find((t) => t.id === b.id)?.google_event_id
-    );
-    // Include all task blocks that don't have google_event_id (not yet on calendar)
+    // Report positions for task blocks not matched to calendar events
     const positions: TaskPosition[] = taskBlocks
-      .filter((b) => {
-        const task = tasks.find((t) => t.id === b.id);
-        return task && !task.google_event_id;
-      })
+      .filter((b) => !scheduledTaskIds.has(b.id))
       .map((b) => ({ taskId: b.id, startMin: b.startMin, endMin: b.endMin }));
     onTaskPositionsChangeRef.current(positions);
-  }, [taskBlocks, tasks]);
+  }, [taskBlocks, scheduledTaskIds]);
 
   // Current time (updates every minute for the red line indicator)
   const [currentMinute, setCurrentMinute] = useState(() => {
@@ -404,10 +399,9 @@ export function DayTimeline({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, block: TimeBlock) => {
-      // Only allow dragging unscheduled task blocks
-      const task = tasks.find((t) => t.id === block.id);
-      if (!task || task.google_event_id) return;
+      // Only allow dragging unscheduled task blocks (not matched to calendar events)
       if (block.type !== "task") return;
+      if (scheduledTaskIds.has(block.id)) return;
 
       e.preventDefault();
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -420,7 +414,7 @@ export function DayTimeline({
       };
       setDraggingId(block.id);
     },
-    [tasks]
+    [scheduledTaskIds]
   );
 
   const handlePointerMove = useCallback(
@@ -512,7 +506,7 @@ export function DayTimeline({
                 const useCalendarColor = block.type === "event" && block.color;
                 const isDraggable =
                   block.type === "task" &&
-                  !tasks.find((t) => t.id === block.id)?.google_event_id;
+                  !scheduledTaskIds.has(block.id);
                 const isDragging = draggingId === block.id;
                 const isCompact = heightRem < 2.2;
                 const timeStr = `${minutesToTimeStr(block.startMin)}–${minutesToTimeStr(block.endMin)}`;

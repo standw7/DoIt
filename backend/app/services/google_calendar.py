@@ -119,9 +119,18 @@ async def list_all_events(
     access_token: str,
     time_min: str,
     time_max: str,
+    doit_calendar_id: str | None = None,
 ) -> list[dict]:
-    """Fetch events from all visible user calendars in parallel."""
+    """Fetch events from all visible user calendars in parallel.
+
+    Always includes the DoIt calendar even if not marked as visible/selected
+    in the user's Google Calendar UI.
+    """
     calendars = await get_visible_calendars(access_token)
+
+    # Ensure the DoIt calendar is always included
+    if doit_calendar_id and not any(c["id"] == doit_calendar_id for c in calendars):
+        calendars.append({"id": doit_calendar_id, "color": ""})
 
     async def _fetch_one(cal: dict) -> list[dict]:
         try:

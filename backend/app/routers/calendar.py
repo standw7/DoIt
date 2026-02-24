@@ -85,7 +85,10 @@ async def list_events(
         return []
 
     access_token = await _get_access_token(user_settings)
-    events = await google_calendar.list_all_events(access_token, start, end)
+    events = await google_calendar.list_all_events(
+        access_token, start, end,
+        doit_calendar_id=user_settings.doit_calendar_id,
+    )
     return events
 
 

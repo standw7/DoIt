@@ -273,6 +273,7 @@ export default function SchedulePage() {
   async function handleEventCreated(taskId: string, eventId: string) {
     await updateTask(taskId, { google_event_id: eventId });
     await refetchEvents();
+    await refetchDayTasks();
   }
 
   async function handleBudgetOverride(minutes: number) {
