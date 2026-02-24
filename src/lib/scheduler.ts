@@ -1,6 +1,17 @@
 import { Task, CalendarEvent } from "./types";
 import { format, addDays, parseISO, differenceInCalendarDays, differenceInMinutes } from "date-fns";
 
+export interface WeeklyBudgets {
+  enabled: boolean;
+  monday: number | null;
+  tuesday: number | null;
+  wednesday: number | null;
+  thursday: number | null;
+  friday: number | null;
+  saturday: number | null;
+  sunday: number | null;
+}
+
 interface SchedulerInput {
   task: { estimated_minutes: number; due_date: string | null; priority: "low" | "medium" | "high"; available_from?: string | null };
   existingTasks: Task[];
@@ -9,6 +20,8 @@ interface SchedulerInput {
   workingHoursEnd: string;
   dailyBudget: number;
   skipWeekends?: boolean;
+  weeklyBudgets?: WeeklyBudgets | null;
+  dateOverrides?: Map<string, number> | null;
 }
 
 interface DayScore {
@@ -52,6 +65,43 @@ function getDayEventMinutes(dateStr: string, calendarEvents: CalendarEvent[]): n
   return calendarEvents
     .filter((e) => e.start.startsWith(dateStr) && !e.allDay)
     .reduce((sum, e) => sum + Math.abs(differenceInMinutes(parseISO(e.end), parseISO(e.start))), 0);
+}
+
+/**
+ * Get the effective budget for a given date.
+ * Precedence: date override > day-of-week pattern > global default.
+ */
+export function getEffectiveBudget(
+  dateStr: string,
+  globalBudget: number,
+  weeklyBudgets?: WeeklyBudgets | null,
+  dateOverrides?: Map<string, number> | null,
+): number {
+  // Tier 1: specific date override
+  if (dateOverrides?.has(dateStr)) {
+    return dateOverrides.get(dateStr)!;
+  }
+
+  // Tier 2: day-of-week pattern
+  if (weeklyBudgets?.enabled) {
+    const dayOfWeek = parseISO(dateStr).getDay();
+    const dayBudgets = [
+      weeklyBudgets.sunday,
+      weeklyBudgets.monday,
+      weeklyBudgets.tuesday,
+      weeklyBudgets.wednesday,
+      weeklyBudgets.thursday,
+      weeklyBudgets.friday,
+      weeklyBudgets.saturday,
+    ];
+    const dayBudget = dayBudgets[dayOfWeek];
+    if (dayBudget !== null && dayBudget !== undefined) {
+      return dayBudget;
+    }
+  }
+
+  // Tier 3: global default
+  return globalBudget;
 }
 
 /**
@@ -125,7 +175,8 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     }
 
     const taskMinutesAfter = taskMinutes + task.estimated_minutes;
-    const withinBudget = taskMinutesAfter <= dailyBudget;
+    const effectiveBudget = getEffectiveBudget(dateStr, dailyBudget, input.weeklyBudgets, input.dateOverrides);
+    const withinBudget = taskMinutesAfter <= effectiveBudget;
     const isDueDay = task.due_date ? dateStr === task.due_date : false;
 
     // --- Budget score: hard gate ---
@@ -134,8 +185,8 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
     let budgetScore: number;
     if (withinBudget) {
       // Prefer days with the most remaining budget room → even spread
-      const remainingBudget = dailyBudget - taskMinutesAfter;
-      budgetScore = 100 + (remainingBudget / Math.max(dailyBudget, 1)) * 50;
+      const remainingBudget = effectiveBudget - taskMinutesAfter;
+      budgetScore = 100 + (remainingBudget / Math.max(effectiveBudget, 1)) * 50;
     } else {
       // Over budget — only viable as a last resort on the due day
       budgetScore = isDueDay ? -100 : -1000;
@@ -147,7 +198,7 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
       spreadScore = 100;
     } else {
       // Prefer days with the lowest existing load (most room = best for spreading)
-      const loadRatio = taskMinutes / Math.max(dailyBudget, 1);
+      const loadRatio = taskMinutes / Math.max(effectiveBudget, 1);
       spreadScore = 100 * (1 - loadRatio);
     }
 
@@ -250,8 +301,10 @@ export function rebalanceAutoAssigned(input: {
   workingHoursEnd: string;
   dailyBudget: number;
   skipWeekends?: boolean;
+  weeklyBudgets?: WeeklyBudgets | null;
+  dateOverrides?: Map<string, number> | null;
 }): { id: string; newDay: string }[] {
-  const { tasks, calendarEvents, workingHoursStart, workingHoursEnd, dailyBudget, skipWeekends } = input;
+  const { tasks, calendarEvents, workingHoursStart, workingHoursEnd, dailyBudget, skipWeekends, weeklyBudgets, dateOverrides } = input;
 
   const autoTasks = tasks.filter(
     (t) => t.auto_assigned && t.status === "planned" && t.day
@@ -288,6 +341,8 @@ export function rebalanceAutoAssigned(input: {
       workingHoursEnd,
       dailyBudget,
       skipWeekends,
+      weeklyBudgets,
+      dateOverrides,
     });
 
     if (bestDay !== task.day) {
