@@ -366,42 +366,8 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Budget + auto-assign + rebalance */}
+      {/* Auto-assign + rebalance */}
       <div className="space-y-2">
-        {!loading && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground shrink-0">Budget:</span>
-            <input
-              type="number"
-              min={30}
-              max={480}
-              step={15}
-              defaultValue={effectiveBudget}
-              key={`${selectedDate}-${effectiveBudget}`}
-              onBlur={(e) => {
-                const v = parseInt(e.target.value, 10);
-                if (!isNaN(v) && v >= 30 && v <= 480 && v !== effectiveBudget) {
-                  handleBudgetOverride(v);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
-            />
-            <span className="text-sm text-muted-foreground">min</span>
-            {selectedDateOverride != null && (
-              <button
-                onClick={handleClearBudgetOverride}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                reset
-              </button>
-            )}
-          </div>
-        )}
         <div className="flex gap-2">
           {unassignedTasks.length > 0 && (
             <Button
@@ -457,6 +423,10 @@ export default function SchedulePage() {
           onEditTask={setEditingTask}
           onTaskPositionsChange={setTaskPositions}
           onRepairEventLink={handleRepairEventLink}
+          effectiveBudget={effectiveBudget}
+          dateOverride={selectedDateOverride}
+          onBudgetOverride={handleBudgetOverride}
+          onClearBudgetOverride={handleClearBudgetOverride}
         />
       )}
 

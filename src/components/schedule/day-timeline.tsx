@@ -4,7 +4,6 @@ import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical, Pencil } from "lucide-react";
 import { parseISO, format } from "date-fns";
@@ -102,63 +101,6 @@ function getContrastColor(hex: string): string {
   return luminance > 0.5 ? "#1f2937" : "#ffffff";
 }
 
-function BudgetOverrideField({
-  effectiveBudget,
-  dateOverride,
-  onBudgetOverride,
-  onClearBudgetOverride,
-}: {
-  effectiveBudget: number;
-  dateOverride?: number | null;
-  onBudgetOverride: (minutes: number) => void;
-  onClearBudgetOverride?: () => void;
-}) {
-  const [localVal, setLocalVal] = useState(String(effectiveBudget));
-  const prevBudget = useRef(effectiveBudget);
-
-  // Sync local value when effective budget changes externally
-  if (prevBudget.current !== effectiveBudget) {
-    prevBudget.current = effectiveBudget;
-    setLocalVal(String(effectiveBudget));
-  }
-
-  function commitOverride() {
-    const minutes = parseInt(localVal, 10);
-    if (isNaN(minutes) || minutes < 30 || minutes > 480) {
-      setLocalVal(String(effectiveBudget));
-      return;
-    }
-    if (minutes !== effectiveBudget) {
-      onBudgetOverride(minutes);
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-1">
-      <span className="text-xs text-muted-foreground">Budget:</span>
-      <Input
-        type="number"
-        min={30}
-        max={480}
-        step={15}
-        value={localVal}
-        onChange={(e) => setLocalVal(e.target.value)}
-        onBlur={commitOverride}
-        onKeyDown={(e) => { if (e.key === "Enter") commitOverride(); }}
-        className="h-7 w-20 text-xs"
-      />
-      <span className="text-xs text-muted-foreground">min</span>
-      {dateOverride != null && onClearBudgetOverride && (
-        <button
-          onClick={onClearBudgetOverride}
-          className="text-xs text-muted-foreground hover:text-foreground underline"
-        >
-          reset
-        </button>
-      )}
-    </div>
-  );
-}
 
 export function DayTimeline({
   date,
@@ -488,6 +430,36 @@ export function DayTimeline({
           <CardTitle className="flex items-center gap-2 text-base">
             <Clock className="h-4 w-4" />
             Timeline
+            {effectiveBudget !== undefined && onBudgetOverride && (
+              <span className="ml-auto flex items-center gap-1.5 text-sm font-normal">
+                <span className="text-muted-foreground">Budget:</span>
+                <input
+                  type="number"
+                  min={30}
+                  max={480}
+                  step={15}
+                  defaultValue={effectiveBudget}
+                  key={`${date}-${effectiveBudget}`}
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 30 && v <= 480 && v !== effectiveBudget) {
+                      onBudgetOverride(v);
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  className="h-7 w-16 rounded-md border bg-background px-1.5 text-sm text-center"
+                />
+                <span className="text-muted-foreground">min</span>
+                {dateOverride != null && onClearBudgetOverride && (
+                  <button
+                    onClick={onClearBudgetOverride}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    reset
+                  </button>
+                )}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -635,7 +607,7 @@ export function DayTimeline({
       {(() => {
         const visibleTasks = tasks.filter((t) => t.status !== "skipped");
         const activeTasks = visibleTasks.filter((t) => t.status !== "done");
-        if (visibleTasks.length === 0 && !effectiveBudget) return null;
+        if (visibleTasks.length === 0) return null;
         // Build lookup for task time ranges from all blocks
         const blockTimeMap = new Map<string, { startMin: number; endMin: number }>();
         for (const b of blocks) {
@@ -652,14 +624,6 @@ export function DayTimeline({
                   </span>
                 )}
               </CardTitle>
-              {effectiveBudget !== undefined && onBudgetOverride && (
-                <BudgetOverrideField
-                  effectiveBudget={effectiveBudget}
-                  dateOverride={dateOverride}
-                  onBudgetOverride={onBudgetOverride}
-                  onClearBudgetOverride={onClearBudgetOverride}
-                />
-              )}
             </CardHeader>
             <CardContent className="space-y-2">
               {visibleTasks.map((task) => {
