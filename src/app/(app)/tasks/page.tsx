@@ -67,13 +67,10 @@ export default function TasksPage() {
     fetchAllTasks();
   }, [fetchAllTasks]);
 
-  async function handleCreateTask(task: any) {
+  async function runRebalance() {
     try {
-      await api.createTask(task);
       const freshTasks = await api.getTasks();
       setAllTasks(freshTasks);
-
-      // Rebalance auto-assigned tasks for optimal spread
       const wb: WeeklyBudgets = {
         enabled: settings.custom_weekly_budgets_enabled,
         monday: settings.budget_monday,
@@ -104,10 +101,19 @@ export default function TasksPage() {
     }
   }
 
+  async function handleCreateTask(task: any) {
+    try {
+      await api.createTask(task);
+      await runRebalance();
+    } catch {
+      // ignore
+    }
+  }
+
   async function handleUpdateTask(id: string, updates: Partial<Task>) {
     try {
       await api.updateTask(id, updates);
-      await fetchAllTasks();
+      await runRebalance();
     } catch {
       // ignore
     }
@@ -118,6 +124,7 @@ export default function TasksPage() {
     setAllTasks((tasks) => tasks.filter((t) => t.id !== id));
     try {
       await api.deleteTask(id);
+      await runRebalance();
     } catch {
       setAllTasks(prev);
     }
@@ -133,7 +140,7 @@ export default function TasksPage() {
     );
     try {
       await api.updateTask(task.id, { status: newStatus });
-      await fetchAllTasks();
+      await runRebalance();
     } catch {
       setAllTasks(prev);
     }
