@@ -28,7 +28,7 @@ export function DateSelector({ date, onChange }: DateSelectorProps) {
   }
 
   return (
-    <div className="relative flex items-center justify-center gap-2">
+    <div className="flex items-center gap-2">
       <Button variant="ghost" size="icon" onClick={goBack}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -49,15 +49,16 @@ export function DateSelector({ date, onChange }: DateSelectorProps) {
         </PopoverContent>
       </Popover>
 
-      <Button variant="ghost" size="icon" onClick={goForward}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-
-      {!today && (
-        <Button variant="ghost" size="sm" onClick={goToday} className="absolute left-full ml-2">
-          Today
+      <div className="relative">
+        <Button variant="ghost" size="icon" onClick={goForward}>
+          <ChevronRight className="h-4 w-4" />
         </Button>
-      )}
+        {!today && (
+          <Button variant="ghost" size="sm" onClick={goToday} className="absolute left-full top-1/2 -translate-y-1/2 ml-1">
+            Today
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
