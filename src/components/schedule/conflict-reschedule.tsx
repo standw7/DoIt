@@ -15,6 +15,7 @@ interface ConflictRescheduleProps {
   workStart: string;
   workEnd: string;
   onRescheduled: () => void;
+  onUnscheduleAndRebalance?: (tasks: Task[]) => void;
 }
 
 function timeToMinutes(time: string): number {
@@ -42,8 +43,10 @@ export function ConflictReschedule({
   workStart,
   workEnd,
   onRescheduled,
+  onUnscheduleAndRebalance,
 }: ConflictRescheduleProps) {
   const [rescheduling, setRescheduling] = useState(false);
+  const [unscheduling, setUnscheduling] = useState(false);
 
   const conflicts = useMemo(() => {
     const workStartMin = timeToMinutes(workStart);
@@ -112,7 +115,7 @@ export function ConflictReschedule({
     for (const event of events) {
       if (event.allDay) continue;
       if (!event.start.startsWith(date)) continue;
-      if (conflictEventIds.has(event.id)) continue; // skip conflicting tasks, we're moving them
+      if (conflictEventIds.has(event.id)) continue;
 
       const evStart = parseISO(event.start);
       const evEnd = parseISO(event.end);
@@ -154,7 +157,6 @@ export function ConflictReschedule({
     for (const { task, taskEvent } of conflicts) {
       const duration = task.estimated_minutes ?? 30;
 
-      // Find a slot that fits this task
       let placed = false;
       for (const slot of slots) {
         const available = slot.end - slot.cursor;
@@ -197,24 +199,69 @@ export function ConflictReschedule({
     setRescheduling(false);
   }
 
+  async function handleUnscheduleAndRebalance() {
+    if (!onUnscheduleAndRebalance) return;
+    setUnscheduling(true);
+
+    const tasksToUnschedule: Task[] = [];
+
+    for (const { task, taskEvent } of conflicts) {
+      try {
+        // Remove from Google Calendar
+        await api.deleteCalendarEvent(taskEvent.id);
+        // Clear google_event_id on the task
+        await api.updateTask(task.id, { google_event_id: null } as any);
+        tasksToUnschedule.push(task);
+      } catch {
+        toast.error(`Failed to unschedule "${task.name}"`);
+      }
+    }
+
+    if (tasksToUnschedule.length > 0) {
+      toast.success(
+        `Unscheduled ${tasksToUnschedule.length} task${tasksToUnschedule.length > 1 ? "s" : ""} — rebalancing`
+      );
+      onUnscheduleAndRebalance(tasksToUnschedule);
+    }
+
+    setUnscheduling(false);
+  }
+
+  const taskNames = conflicts.map((c) => c.task.name);
+
   return (
-    <div className="flex items-center gap-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-      <AlertTriangle className="h-4 w-4 shrink-0" />
-      <span className="flex-1">
-        {conflicts.length} scheduled task{conflicts.length > 1 ? "s" : ""} conflict{conflicts.length === 1 ? "s" : ""} with calendar events
-      </span>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleReschedule}
-        disabled={rescheduling}
-        className="shrink-0"
-      >
-        {rescheduling ? (
-          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-        ) : null}
-        Reschedule
-      </Button>
+    <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 space-y-2">
+      <div className="flex items-center gap-3">
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <span className="flex-1">
+          {conflicts.length} scheduled task{conflicts.length > 1 ? "s" : ""} conflict{conflicts.length === 1 ? "s" : ""} with calendar events:{" "}
+          <span className="font-medium">{taskNames.join(", ")}</span>
+        </span>
+      </div>
+      <div className="flex gap-2 pl-7">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleReschedule}
+          disabled={rescheduling || unscheduling}
+          className="shrink-0"
+        >
+          {rescheduling && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          Move on calendar
+        </Button>
+        {onUnscheduleAndRebalance && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleUnscheduleAndRebalance}
+            disabled={rescheduling || unscheduling}
+            className="shrink-0"
+          >
+            {unscheduling && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+            Unschedule &amp; rebalance
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

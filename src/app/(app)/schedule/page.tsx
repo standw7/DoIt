@@ -438,7 +438,15 @@ export default function SchedulePage() {
           events={events}
           workStart={settings.working_hours_start}
           workEnd={settings.working_hours_end}
-          onRescheduled={refetchEvents}
+          onRescheduled={async () => {
+            await refetchEvents();
+            await refetchDayTasks();
+          }}
+          onUnscheduleAndRebalance={async () => {
+            await refetchEvents();
+            await refetchDayTasks();
+            await handleRebalance();
+          }}
         />
       )}
 
