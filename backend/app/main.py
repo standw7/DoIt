@@ -20,6 +20,16 @@ def _run_migrations():
                 conn.execute(text(
                     "ALTER TABLE user_settings ADD COLUMN skip_weekends BOOLEAN DEFAULT 0 NOT NULL"
                 ))
+            if "custom_weekly_budgets_enabled" not in columns:
+                conn.execute(text(
+                    "ALTER TABLE user_settings ADD COLUMN custom_weekly_budgets_enabled BOOLEAN DEFAULT 0 NOT NULL"
+                ))
+            for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+                col = f"budget_{day}"
+                if col not in columns:
+                    conn.execute(text(
+                        f"ALTER TABLE user_settings ADD COLUMN {col} INTEGER"
+                    ))
 
 
 @asynccontextmanager

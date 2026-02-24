@@ -9,6 +9,14 @@ class SettingsUpdate(BaseModel):
     daily_minutes_budget: int | None = None
     auto_assign_enabled: bool | None = None
     skip_weekends: bool | None = None
+    custom_weekly_budgets_enabled: bool | None = None
+    budget_monday: int | None = None
+    budget_tuesday: int | None = None
+    budget_wednesday: int | None = None
+    budget_thursday: int | None = None
+    budget_friday: int | None = None
+    budget_saturday: int | None = None
+    budget_sunday: int | None = None
     doit_calendar_id: str | None = None
     google_refresh_token: str | None = None
 
@@ -21,6 +29,14 @@ class SettingsResponse(BaseModel):
     daily_minutes_budget: int
     auto_assign_enabled: bool
     skip_weekends: bool
+    custom_weekly_budgets_enabled: bool
+    budget_monday: int | None = None
+    budget_tuesday: int | None = None
+    budget_wednesday: int | None = None
+    budget_thursday: int | None = None
+    budget_friday: int | None = None
+    budget_saturday: int | None = None
+    budget_sunday: int | None = None
     doit_calendar_id: str | None = None
     google_refresh_token: str | None = None
     created_at: datetime
