@@ -538,6 +538,7 @@ export function DayTimeline({
               {/* Blocks */}
               {layoutBlocks.map(({ block, topRem, heightRem }) => {
                 const useCalendarColor = block.type === "event" && block.color;
+                const isScheduled = block.type === "task" && scheduledTaskIds.has(block.id);
                 const isDraggable =
                   block.type === "task" &&
                   !scheduledTaskIds.has(block.id);
@@ -553,7 +554,9 @@ export function DayTimeline({
                       isCompact ? "py-0.5" : "py-1",
                       !useCalendarColor && block.type === "event" &&
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
-                      block.type === "task" &&
+                      block.type === "task" && isScheduled &&
+                        "bg-emerald-700 text-white dark:bg-emerald-800 dark:text-emerald-100",
+                      block.type === "task" && !isScheduled &&
                         "bg-emerald-200/70 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100",
                       isDraggable && "cursor-grab",
                       isDragging && "cursor-grabbing ring-2 ring-green-500 shadow-lg z-20"
