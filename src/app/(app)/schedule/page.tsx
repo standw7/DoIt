@@ -243,6 +243,13 @@ export default function SchedulePage() {
     }
   }
 
+  async function handleToggleDone(task: Task) {
+    const newStatus = task.status === "done" ? "planned" : "done";
+    await updateTask(task.id, { status: newStatus });
+    await refetchDayTasks();
+    await fetchAllTasks();
+  }
+
   async function handleClearTask(taskId: string) {
     const task = tasks.find((t) => t.id === taskId) ?? allTasks.find((t) => t.id === taskId);
     // Optimistically remove the calendar event from local state immediately
@@ -401,6 +408,7 @@ export default function SchedulePage() {
           workEnd={settings.working_hours_end}
           isToday={selectedDate === today}
           projectMap={projectMap}
+          onToggleDone={handleToggleDone}
           onClearTask={handleClearTask}
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onEditTask={setEditingTask}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical, Pencil } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
@@ -22,6 +23,7 @@ interface DayTimelineProps {
   workEnd: string;
   isToday?: boolean;
   projectMap?: Record<string, string>;
+  onToggleDone?: (task: Task) => void;
   onClearTask?: (taskId: string) => void;
   onRemoveFromCalendar?: (task: Task) => void;
   onEditTask?: (task: Task) => void;
@@ -165,6 +167,7 @@ export function DayTimeline({
   workEnd,
   isToday = false,
   projectMap = {},
+  onToggleDone,
   onClearTask,
   onRemoveFromCalendar,
   onEditTask,
@@ -622,9 +625,16 @@ export function DayTimeline({
                 return (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
-                  <div className="min-w-0">
+                  {onToggleDone && (
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => onToggleDone(task)}
+                      className="h-5 w-5 shrink-0"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
                     <span className="font-medium">{task.name}</span>
                     {timeRange && (
                       <span className="ml-2 text-muted-foreground">
