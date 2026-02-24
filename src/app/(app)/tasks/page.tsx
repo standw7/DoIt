@@ -10,6 +10,7 @@ import { Task } from "@/lib/types";
 import { todayString, formatMinutes } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
@@ -106,6 +107,22 @@ export default function TasksPage() {
     setAllTasks((tasks) => tasks.filter((t) => t.id !== id));
     try {
       await api.deleteTask(id);
+    } catch {
+      setAllTasks(prev);
+    }
+  }
+
+  async function handleToggleDone(task: Task) {
+    const newStatus = task.status === "done" ? (task.day ? "planned" : "backlog") : "done";
+    const prev = allTasks;
+    setAllTasks((tasks) =>
+      tasks.map((t) =>
+        t.id === task.id ? { ...t, status: newStatus } as Task : t
+      )
+    );
+    try {
+      await api.updateTask(task.id, { status: newStatus });
+      await fetchAllTasks();
     } catch {
       setAllTasks(prev);
     }
@@ -210,9 +227,14 @@ export default function TasksPage() {
                   {filteredTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                      className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                     >
-                      <div className="min-w-0">
+                      <Checkbox
+                        checked={false}
+                        onCheckedChange={() => handleToggleDone(task)}
+                        className="h-5 w-5 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
                         <span className="font-medium">{task.name}</span>
                         <div className="flex items-center gap-2 mt-0.5">
                           {task.day && (
@@ -277,9 +299,14 @@ export default function TasksPage() {
                     {completedTasks.slice(0, 20).map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between rounded-md border px-3 py-2 text-sm text-muted-foreground"
+                        className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground"
                       >
-                        <span className="line-through">{task.name}</span>
+                        <Checkbox
+                          checked={true}
+                          onCheckedChange={() => handleToggleDone(task)}
+                          className="h-5 w-5 shrink-0"
+                        />
+                        <span className="line-through flex-1">{task.name}</span>
                         <Badge variant="outline" className="text-xs">
                           {task.status}
                         </Badge>
