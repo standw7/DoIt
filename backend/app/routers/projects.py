@@ -21,16 +21,18 @@ def _with_progress(project: Project, db: Session) -> ProjectWithProgressResponse
     task_count = len(tasks)
     done_count = sum(1 for t in tasks if t.status == "done")
 
-    # Progress based on estimated minutes if available, otherwise task count
-    total_minutes = sum(t.estimated_minutes or 0 for t in tasks)
-    done_minutes = sum(t.estimated_minutes or 0 for t in tasks if t.status == "done")
+    # Progress based on estimated minutes if ALL tasks have estimates,
+    # otherwise fall back to simple task count
+    all_have_estimates = all(t.estimated_minutes is not None for t in tasks)
 
-    if total_minutes > 0:
-        progress = round(done_minutes / total_minutes * 100, 1)
-    elif task_count > 0:
-        progress = round(done_count / task_count * 100, 1)
-    else:
+    if task_count == 0:
         progress = 0.0
+    elif all_have_estimates:
+        total_minutes = sum(t.estimated_minutes for t in tasks)
+        done_minutes = sum(t.estimated_minutes for t in tasks if t.status == "done")
+        progress = round(done_minutes / total_minutes * 100, 1) if total_minutes > 0 else 0.0
+    else:
+        progress = round(done_count / task_count * 100, 1)
 
     return ProjectWithProgressResponse(
         id=project.id,
