@@ -162,12 +162,12 @@ export default function TasksPage() {
       });
     }
 
-    // Sort by due_date ascending, nulls at end
+    // Sort by assigned day ascending, nulls at end
     return [...filtered].sort((a, b) => {
-      if (!a.due_date && !b.due_date) return 0;
-      if (!a.due_date) return 1;
-      if (!b.due_date) return -1;
-      return a.due_date.localeCompare(b.due_date);
+      if (!a.day && !b.day) return 0;
+      if (!a.day) return 1;
+      if (!b.day) return -1;
+      return a.day.localeCompare(b.day);
     });
   }, [activeTasks, dateRange]);
 
