@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarEvent, Task } from "@/lib/types";
 import { cn, formatMinutes } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Clock, AlertCircle, CheckCircle2, X, CalendarMinus, GripVertical, Pencil } from "lucide-react";
 import { parseISO, format } from "date-fns";
 
@@ -25,6 +26,10 @@ interface DayTimelineProps {
   onRemoveFromCalendar?: (task: Task) => void;
   onEditTask?: (task: Task) => void;
   onTaskPositionsChange?: (positions: TaskPosition[]) => void;
+  effectiveBudget?: number;
+  dateOverride?: number | null;
+  onBudgetOverride?: (minutes: number) => void;
+  onClearBudgetOverride?: () => void;
 }
 
 function timeToMinutes(time: string): number {
@@ -94,6 +99,64 @@ function getContrastColor(hex: string): string {
   return luminance > 0.5 ? "#1f2937" : "#ffffff";
 }
 
+function BudgetOverrideField({
+  effectiveBudget,
+  dateOverride,
+  onBudgetOverride,
+  onClearBudgetOverride,
+}: {
+  effectiveBudget: number;
+  dateOverride?: number | null;
+  onBudgetOverride: (minutes: number) => void;
+  onClearBudgetOverride?: () => void;
+}) {
+  const [localVal, setLocalVal] = useState(String(effectiveBudget));
+  const prevBudget = useRef(effectiveBudget);
+
+  // Sync local value when effective budget changes externally
+  if (prevBudget.current !== effectiveBudget) {
+    prevBudget.current = effectiveBudget;
+    setLocalVal(String(effectiveBudget));
+  }
+
+  function commitOverride() {
+    const minutes = parseInt(localVal, 10);
+    if (isNaN(minutes) || minutes < 30 || minutes > 480) {
+      setLocalVal(String(effectiveBudget));
+      return;
+    }
+    if (minutes !== effectiveBudget) {
+      onBudgetOverride(minutes);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <span className="text-xs text-muted-foreground">Budget:</span>
+      <Input
+        type="number"
+        min={30}
+        max={480}
+        step={15}
+        value={localVal}
+        onChange={(e) => setLocalVal(e.target.value)}
+        onBlur={commitOverride}
+        onKeyDown={(e) => { if (e.key === "Enter") commitOverride(); }}
+        className="h-7 w-20 text-xs"
+      />
+      <span className="text-xs text-muted-foreground">min</span>
+      {dateOverride != null && onClearBudgetOverride && (
+        <button
+          onClick={onClearBudgetOverride}
+          className="text-xs text-muted-foreground hover:text-foreground underline"
+        >
+          reset
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DayTimeline({
   date,
   events,
@@ -106,6 +169,10 @@ export function DayTimeline({
   onRemoveFromCalendar,
   onEditTask,
   onTaskPositionsChange,
+  effectiveBudget,
+  dateOverride,
+  onBudgetOverride,
+  onClearBudgetOverride,
 }: DayTimelineProps) {
   const workStartMin = timeToMinutes(workStart);
   const workEndMin = timeToMinutes(workEnd);
@@ -534,7 +601,7 @@ export function DayTimeline({
 
       {(() => {
         const activeTasks = tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
-        if (activeTasks.length === 0) return null;
+        if (activeTasks.length === 0 && !effectiveBudget) return null;
         // Build lookup for task time ranges from all blocks
         const blockTimeMap = new Map<string, { startMin: number; endMin: number }>();
         for (const b of blocks) {
@@ -546,6 +613,14 @@ export function DayTimeline({
               <CardTitle className="text-base">
                 Tasks on this day ({activeTasks.length})
               </CardTitle>
+              {effectiveBudget !== undefined && onBudgetOverride && (
+                <BudgetOverrideField
+                  effectiveBudget={effectiveBudget}
+                  dateOverride={dateOverride}
+                  onBudgetOverride={onBudgetOverride}
+                  onClearBudgetOverride={onClearBudgetOverride}
+                />
+              )}
             </CardHeader>
             <CardContent className="space-y-2">
               {activeTasks.map((task) => {

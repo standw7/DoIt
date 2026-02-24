@@ -18,7 +18,7 @@ import { RecurringTasksSection } from "@/components/settings/recurring-tasks-sec
 import { Loader2, ListTodo, CheckCircle2, ChevronDown, Pencil, X } from "lucide-react";
 import { TaskDetailDialog } from "@/components/tasks/task-detail-dialog";
 import { format, parseISO, addDays, isBefore, startOfDay } from "date-fns";
-import { rebalanceAutoAssigned } from "@/lib/scheduler";
+import { rebalanceAutoAssigned, WeeklyBudgets } from "@/lib/scheduler";
 
 type DateRange = "2days" | "week" | "2weeks" | "all";
 
@@ -74,6 +74,16 @@ export default function TasksPage() {
       setAllTasks(freshTasks);
 
       // Rebalance auto-assigned tasks for optimal spread
+      const wb: WeeklyBudgets = {
+        enabled: settings.custom_weekly_budgets_enabled,
+        monday: settings.budget_monday,
+        tuesday: settings.budget_tuesday,
+        wednesday: settings.budget_wednesday,
+        thursday: settings.budget_thursday,
+        friday: settings.budget_friday,
+        saturday: settings.budget_saturday,
+        sunday: settings.budget_sunday,
+      };
       const changes = rebalanceAutoAssigned({
         tasks: freshTasks,
         calendarEvents: events,
@@ -81,6 +91,7 @@ export default function TasksPage() {
         workingHoursEnd: settings.working_hours_end,
         dailyBudget: settings.daily_minutes_budget,
         skipWeekends: settings.skip_weekends,
+        weeklyBudgets: wb,
       });
       for (const { id, newDay } of changes) {
         await api.updateTask(id, { day: newDay });

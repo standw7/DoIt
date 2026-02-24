@@ -14,7 +14,7 @@ import { ScheduleButton } from "@/components/schedule/schedule-button";
 import { ConflictReschedule } from "@/components/schedule/conflict-reschedule";
 import { OverdueReview } from "@/components/schedule/overdue-review";
 import { todayString, formatMinutes } from "@/lib/utils";
-import { getDayCapacity, pickBestDayWithInfo, rebalanceAutoAssigned } from "@/lib/scheduler";
+import { getDayCapacity, getEffectiveBudget, pickBestDayWithInfo, rebalanceAutoAssigned, WeeklyBudgets } from "@/lib/scheduler";
 import { format, addDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ export default function SchedulePage() {
   const [rebalancing, setRebalancing] = useState(false);
   const [taskPositions, setTaskPositions] = useState<TaskPosition[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [dateOverrides, setDateOverrides] = useState<Map<string, number>>(new Map());
+  const [dateOverridesLoaded, setDateOverridesLoaded] = useState(false);
 
   const {
     settings,
@@ -76,6 +78,23 @@ export default function SchedulePage() {
     fetchAllTasks();
   }, [fetchAllTasks]);
 
+  // Fetch budget overrides for the 14-day window
+  const fetchDateOverrides = useCallback(async () => {
+    try {
+      const overrides = await api.getDailyBudgetOverridesRange(todayString(), futureStr);
+      const map = new Map<string, number>();
+      for (const o of overrides) map.set(o.date, o.minutes_budget);
+      setDateOverrides(map);
+      setDateOverridesLoaded(true);
+    } catch {
+      setDateOverridesLoaded(true);
+    }
+  }, [futureStr]);
+
+  useEffect(() => {
+    fetchDateOverrides();
+  }, [fetchDateOverrides]);
+
   // Auto-generate recurring task instances (only after allTasks has been fetched to avoid duplicates)
   useRecurringGeneration(recurringTasks, allTasksLoaded ? allTasks : null, fetchAllTasks);
 
@@ -88,6 +107,24 @@ export default function SchedulePage() {
     settings.working_hours_start,
     settings.working_hours_end
   );
+
+  const weeklyBudgets: WeeklyBudgets = useMemo(() => ({
+    enabled: settings.custom_weekly_budgets_enabled,
+    monday: settings.budget_monday,
+    tuesday: settings.budget_tuesday,
+    wednesday: settings.budget_wednesday,
+    thursday: settings.budget_thursday,
+    friday: settings.budget_friday,
+    saturday: settings.budget_saturday,
+    sunday: settings.budget_sunday,
+  }), [settings]);
+
+  const effectiveBudget = useMemo(
+    () => getEffectiveBudget(selectedDate, settings.daily_minutes_budget, weeklyBudgets, dateOverrides),
+    [selectedDate, settings.daily_minutes_budget, weeklyBudgets, dateOverrides]
+  );
+
+  const selectedDateOverride = dateOverrides.get(selectedDate) ?? null;
 
   const today = todayString();
 
@@ -135,6 +172,8 @@ export default function SchedulePage() {
         workingHoursEnd: settings.working_hours_end,
         dailyBudget: settings.daily_minutes_budget,
         skipWeekends: settings.skip_weekends,
+        weeklyBudgets,
+        dateOverrides,
       });
 
       if (result.overBudget) {
@@ -180,6 +219,8 @@ export default function SchedulePage() {
         workingHoursEnd: settings.working_hours_end,
         dailyBudget: settings.daily_minutes_budget,
         skipWeekends: settings.skip_weekends,
+        weeklyBudgets,
+        dateOverrides,
       });
 
       for (const { id, newDay } of changes) {
@@ -232,6 +273,28 @@ export default function SchedulePage() {
   async function handleEventCreated(taskId: string, eventId: string) {
     await updateTask(taskId, { google_event_id: eventId });
     await refetchEvents();
+  }
+
+  async function handleBudgetOverride(minutes: number) {
+    try {
+      await api.upsertDailyBudgetOverride(selectedDate, minutes);
+      setDateOverrides((prev) => new Map(prev).set(selectedDate, minutes));
+    } catch {
+      toast.error("Failed to set budget override");
+    }
+  }
+
+  async function handleClearBudgetOverride() {
+    try {
+      await api.deleteDailyBudgetOverride(selectedDate);
+      setDateOverrides((prev) => {
+        const next = new Map(prev);
+        next.delete(selectedDate);
+        return next;
+      });
+    } catch {
+      toast.error("Failed to clear budget override");
+    }
   }
 
   async function handleOverdueUpdate(id: string, updates: Record<string, any>) {
@@ -340,6 +403,10 @@ export default function SchedulePage() {
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onEditTask={setEditingTask}
           onTaskPositionsChange={setTaskPositions}
+          effectiveBudget={effectiveBudget}
+          dateOverride={selectedDateOverride}
+          onBudgetOverride={handleBudgetOverride}
+          onClearBudgetOverride={handleClearBudgetOverride}
         />
       )}
 
