@@ -35,6 +35,7 @@ class CalendarEventResponse(BaseModel):
     end: str
     allDay: bool
     color: str | None = None
+    doitTaskId: str | None = None
 
 
 class SetupResponse(BaseModel):
@@ -112,6 +113,7 @@ async def create_event(
         start_datetime=body.startDateTime,
         end_datetime=body.endDateTime,
         description=body.description,
+        task_id=body.taskId,
     )
     return {"eventId": event_id}
 

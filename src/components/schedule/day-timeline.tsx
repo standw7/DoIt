@@ -28,6 +28,7 @@ interface DayTimelineProps {
   onRemoveFromCalendar?: (task: Task) => void;
   onEditTask?: (task: Task) => void;
   onTaskPositionsChange?: (positions: TaskPosition[]) => void;
+  onRepairEventLink?: (taskId: string, eventId: string) => void;
   effectiveBudget?: number;
   dateOverride?: number | null;
   onBudgetOverride?: (minutes: number) => void;
@@ -172,6 +173,7 @@ export function DayTimeline({
   onRemoveFromCalendar,
   onEditTask,
   onTaskPositionsChange,
+  onRepairEventLink,
   effectiveBudget,
   dateOverride,
   onBudgetOverride,
@@ -194,20 +196,37 @@ export function DayTimeline({
   }
 
   // Compute blocks from events and auto-placed tasks
-  const { autoBlocks, eventBlocks, overflowTasks, scheduledTaskIds } = useMemo(() => {
+  const { autoBlocks, eventBlocks, overflowTasks, scheduledTaskIds, repairLinks } = useMemo(() => {
     // Map google_event_id → task so we can identify task events on the calendar
     const taskByEventId = new Map<string, Task>();
+    // Also map task.id → task for fallback matching via doitTaskId
+    const taskById = new Map<string, Task>();
     for (const t of tasks) {
       if (t.google_event_id) taskByEventId.set(t.google_event_id, t);
+      taskById.set(t.id, t);
     }
 
     // Build event blocks — mark task-owned events as type "task"
     const eventBlocks: TimeBlock[] = [];
     const scheduledTaskEventIds = new Set<string>();
+    // Track links that need repair (matched via doitTaskId but task has wrong/missing google_event_id)
+    const repairLinks: { taskId: string; eventId: string }[] = [];
     for (const event of events) {
       const range = eventToTimeRange(event, date, workStartMin, workEndMin);
       if (!range) continue;
-      const matchedTask = taskByEventId.get(event.id);
+      // Primary match: task.google_event_id === event.id
+      let matchedTask = taskByEventId.get(event.id);
+      // Fallback match: event.doitTaskId matches a task ID
+      if (!matchedTask && event.doitTaskId) {
+        const fallback = taskById.get(event.doitTaskId);
+        if (fallback) {
+          matchedTask = fallback;
+          // Task's google_event_id is missing or wrong — queue repair
+          if (fallback.google_event_id !== event.id) {
+            repairLinks.push({ taskId: fallback.id, eventId: event.id });
+          }
+        }
+      }
       if (matchedTask) {
         // This calendar event belongs to a DoIt task — render as green task block
         scheduledTaskEventIds.add(matchedTask.id);
@@ -295,7 +314,7 @@ export function DayTimeline({
       }
     }
 
-    return { autoBlocks: taskBlocks, eventBlocks, overflowTasks, scheduledTaskIds: scheduledTaskEventIds };
+    return { autoBlocks: taskBlocks, eventBlocks, overflowTasks, scheduledTaskIds: scheduledTaskEventIds, repairLinks };
   }, [events, tasks, date, workStartMin, workEndMin, projectMap]);
 
   // Apply drag overrides to task blocks
@@ -326,6 +345,17 @@ export function DayTimeline({
       .map((b) => ({ taskId: b.id, startMin: b.startMin, endMin: b.endMin }));
     onTaskPositionsChangeRef.current(positions);
   }, [taskBlocks, scheduledTaskIds]);
+
+  // Auto-repair broken task↔event links (matched via doitTaskId fallback)
+  const onRepairEventLinkRef = useRef(onRepairEventLink);
+  onRepairEventLinkRef.current = onRepairEventLink;
+
+  useEffect(() => {
+    if (!onRepairEventLinkRef.current || repairLinks.length === 0) return;
+    for (const { taskId, eventId } of repairLinks) {
+      onRepairEventLinkRef.current(taskId, eventId);
+    }
+  }, [repairLinks]);
 
   // Current time (updates every minute for the red line indicator)
   const [currentMinute, setCurrentMinute] = useState(() => {

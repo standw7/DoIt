@@ -83,6 +83,7 @@ export interface CalendarEvent {
   end: string;
   allDay: boolean;
   color?: string;
+  doitTaskId?: string | null;
 }
 
 export interface DailyBudgetOverride {

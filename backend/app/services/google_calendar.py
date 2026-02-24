@@ -164,6 +164,7 @@ async def create_event(
     start_datetime: str,
     end_datetime: str,
     description: str | None = None,
+    task_id: str | None = None,
 ) -> str:
     """Create a calendar event. Returns the event ID."""
     headers = await _headers(access_token)
@@ -175,6 +176,8 @@ async def create_event(
     }
     if description:
         body["description"] = description
+    if task_id:
+        body["extendedProperties"] = {"private": {"doitTaskId": task_id}}
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -242,6 +245,11 @@ def _normalize_event(item: dict, calendar_color: str = "") -> dict:
 
     all_day = "date" in start_raw and "dateTime" not in start_raw
 
+    # Extract DoIt task ID from extended properties (if this event was created by DoIt)
+    doit_task_id = (
+        item.get("extendedProperties", {}).get("private", {}).get("doitTaskId")
+    )
+
     return {
         "id": item["id"],
         "summary": item.get("summary", "(No title)"),
@@ -249,4 +257,5 @@ def _normalize_event(item: dict, calendar_color: str = "") -> dict:
         "end": end_raw.get("dateTime") or end_raw.get("date", ""),
         "allDay": all_day,
         "color": calendar_color or None,
+        "doitTaskId": doit_task_id,
     }

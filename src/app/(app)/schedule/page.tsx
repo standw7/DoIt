@@ -284,6 +284,11 @@ export default function SchedulePage() {
     await refetchDayTasks();
   }
 
+  async function handleRepairEventLink(taskId: string, eventId: string) {
+    // Auto-repair: task was matched via doitTaskId but its google_event_id is wrong/missing
+    await updateTask(taskId, { google_event_id: eventId } as any);
+  }
+
   async function handleBudgetOverride(minutes: number) {
     try {
       await api.upsertDailyBudgetOverride(selectedDate, minutes);
@@ -359,36 +364,72 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Auto-assign + rebalance buttons */}
-      <div className="flex gap-2">
-        {unassignedTasks.length > 0 && (
+      {/* Budget + auto-assign + rebalance */}
+      <div className="space-y-2">
+        {!loading && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground shrink-0">Budget:</span>
+            <input
+              type="number"
+              min={30}
+              max={480}
+              step={15}
+              defaultValue={effectiveBudget}
+              key={`${selectedDate}-${effectiveBudget}`}
+              onBlur={(e) => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v) && v >= 30 && v <= 480 && v !== effectiveBudget) {
+                  handleBudgetOverride(v);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
+            />
+            <span className="text-sm text-muted-foreground">min</span>
+            {selectedDateOverride != null && (
+              <button
+                onClick={handleClearBudgetOverride}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                reset
+              </button>
+            )}
+          </div>
+        )}
+        <div className="flex gap-2">
+          {unassignedTasks.length > 0 && (
+            <Button
+              onClick={handleAutoAssignAll}
+              disabled={assigning || rebalancing}
+              variant="outline"
+              className="flex-1"
+            >
+              {assigning ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Wand2 className="mr-2 h-4 w-4" />
+              )}
+              Assign {unassignedTasks.length} task{unassignedTasks.length > 1 ? "s" : ""}
+            </Button>
+          )}
           <Button
-            onClick={handleAutoAssignAll}
+            onClick={handleRebalance}
             disabled={assigning || rebalancing}
             variant="outline"
-            className="flex-1"
+            className={unassignedTasks.length > 0 ? "" : "w-full"}
           >
-            {assigning ? (
+            {rebalancing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Wand2 className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4" />
             )}
-            Assign {unassignedTasks.length} task{unassignedTasks.length > 1 ? "s" : ""}
+            Rebalance schedule
           </Button>
-        )}
-        <Button
-          onClick={handleRebalance}
-          disabled={assigning || rebalancing}
-          variant="outline"
-          className={unassignedTasks.length > 0 ? "" : "w-full"}
-        >
-          {rebalancing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          Rebalance schedule
-        </Button>
+        </div>
       </div>
 
       {/* Loading state */}
@@ -413,10 +454,7 @@ export default function SchedulePage() {
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onEditTask={setEditingTask}
           onTaskPositionsChange={setTaskPositions}
-          effectiveBudget={effectiveBudget}
-          dateOverride={selectedDateOverride}
-          onBudgetOverride={handleBudgetOverride}
-          onClearBudgetOverride={handleClearBudgetOverride}
+          onRepairEventLink={handleRepairEventLink}
         />
       )}
 
