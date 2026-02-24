@@ -28,7 +28,7 @@ export function DateSelector({ date, onChange }: DateSelectorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="relative flex items-center justify-center gap-2">
       <Button variant="ghost" size="icon" onClick={goBack}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -54,7 +54,7 @@ export function DateSelector({ date, onChange }: DateSelectorProps) {
       </Button>
 
       {!today && (
-        <Button variant="ghost" size="sm" onClick={goToday}>
+        <Button variant="ghost" size="sm" onClick={goToday} className="absolute left-full ml-2">
           Today
         </Button>
       )}
