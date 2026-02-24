@@ -486,13 +486,15 @@ export default function SchedulePage() {
           task={editingTask}
           open={true}
           onOpenChange={(open) => { if (!open) setEditingTask(null); }}
-          onUpdate={(id, updates) => {
-            updateTask(id, updates);
+          onUpdate={async (id, updates) => {
+            await updateTask(id, updates);
             setEditingTask(null);
+            await handleRebalance();
           }}
-          onDelete={(id) => {
-            deleteTask(id);
+          onDelete={async (id) => {
+            await deleteTask(id);
             setEditingTask(null);
+            await handleRebalance();
           }}
         />
       )}
