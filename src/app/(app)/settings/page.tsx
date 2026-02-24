@@ -67,6 +67,16 @@ function SettingsPageInner() {
         dailyBudget={settings.daily_minutes_budget}
         autoAssignEnabled={settings.auto_assign_enabled}
         skipWeekends={settings.skip_weekends}
+        customWeeklyBudgetsEnabled={settings.custom_weekly_budgets_enabled}
+        weeklyBudgets={{
+          monday: settings.budget_monday,
+          tuesday: settings.budget_tuesday,
+          wednesday: settings.budget_wednesday,
+          thursday: settings.budget_thursday,
+          friday: settings.budget_friday,
+          saturday: settings.budget_saturday,
+          sunday: settings.budget_sunday,
+        }}
         calendarConnected={calendarConnected}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}

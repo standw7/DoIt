@@ -12,12 +12,17 @@ import { formatMinutes } from "@/lib/utils";
 import { UserSettingsUpdate } from "@/lib/types";
 import { toast } from "sonner";
 
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+type DayKey = typeof DAY_KEYS[number];
+
 interface SettingsPanelProps {
   workingHoursStart: string;
   workingHoursEnd: string;
   dailyBudget: number;
   autoAssignEnabled: boolean;
   skipWeekends: boolean;
+  customWeeklyBudgetsEnabled: boolean;
+  weeklyBudgets: Record<DayKey, number | null>;
   calendarConnected: boolean;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
@@ -29,6 +34,8 @@ export function SettingsPanel({
   dailyBudget,
   autoAssignEnabled,
   skipWeekends,
+  customWeeklyBudgetsEnabled,
+  weeklyBudgets,
   calendarConnected,
   onUpdate,
   onSetupCalendar,
@@ -37,6 +44,9 @@ export function SettingsPanel({
   const [localStart, setLocalStart] = useState(workingHoursStart);
   const [localEnd, setLocalEnd] = useState(workingHoursEnd);
   const [localBudget, setLocalBudget] = useState(String(dailyBudget));
+  const [localWeekly, setLocalWeekly] = useState<Record<DayKey, string>>(
+    Object.fromEntries(DAY_KEYS.map((d) => [d, weeklyBudgets[d] != null ? String(weeklyBudgets[d]) : ""])) as Record<DayKey, string>
+  );
 
   async function commitTime(field: "working_hours_start" | "working_hours_end", value: string) {
     if (!value) return;
@@ -55,6 +65,37 @@ export function SettingsPanel({
     }
     try {
       await onUpdate({ daily_minutes_budget: minutes });
+    } catch {
+      toast.error("Failed to update budget");
+    }
+  }
+
+  async function handleWeeklyBudgetsToggle(checked: boolean) {
+    try {
+      await onUpdate({ custom_weekly_budgets_enabled: checked });
+    } catch {
+      toast.error("Failed to update setting");
+    }
+  }
+
+  async function commitWeeklyBudget(day: DayKey) {
+    const raw = localWeekly[day];
+    if (raw === "") {
+      // Clear the per-day budget (use global default)
+      try {
+        await onUpdate({ [`budget_${day}`]: null } as any);
+      } catch {
+        toast.error("Failed to update budget");
+      }
+      return;
+    }
+    const minutes = parseInt(raw, 10);
+    if (isNaN(minutes) || minutes < 30 || minutes > 480) {
+      setLocalWeekly((prev) => ({ ...prev, [day]: weeklyBudgets[day] != null ? String(weeklyBudgets[day]) : "" }));
+      return;
+    }
+    try {
+      await onUpdate({ [`budget_${day}`]: minutes } as any);
     } catch {
       toast.error("Failed to update budget");
     }
@@ -141,6 +182,44 @@ export function SettingsPanel({
             className="max-w-[200px]"
           />
         </div>
+
+        {/* Custom weekly budgets toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="weekly-budgets">Custom weekly budgets</Label>
+            <p className="text-xs text-muted-foreground">
+              Set different task budgets for each day of the week
+            </p>
+          </div>
+          <Switch
+            id="weekly-budgets"
+            checked={customWeeklyBudgetsEnabled}
+            onCheckedChange={handleWeeklyBudgetsToggle}
+          />
+        </div>
+
+        {/* Per-day budget inputs */}
+        {customWeeklyBudgetsEnabled && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {DAY_KEYS.map((day) => (
+              <div key={day} className="flex items-center gap-2">
+                <Label className="w-10 text-xs capitalize shrink-0">{day.slice(0, 3)}</Label>
+                <Input
+                  type="number"
+                  min={30}
+                  max={480}
+                  step={15}
+                  placeholder={String(dailyBudget)}
+                  value={localWeekly[day]}
+                  onChange={(e) => setLocalWeekly((prev) => ({ ...prev, [day]: e.target.value }))}
+                  onBlur={() => commitWeeklyBudget(day)}
+                  className="h-9"
+                />
+                <span className="text-xs text-muted-foreground whitespace-nowrap">min</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Auto-assign toggle */}
         <div className="flex items-center justify-between">
