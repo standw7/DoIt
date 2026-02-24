@@ -656,10 +656,16 @@ export function DayTimeline({
             <CardContent className="space-y-2">
               {activeTasks.map((task) => {
                 const timeRange = blockTimeMap.get(task.id);
+                const isOnCalendar = scheduledTaskIds.has(task.id) || !!task.google_event_id;
                 return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+                    isOnCalendar
+                      ? "border-green-700 bg-green-800/10 dark:border-green-600 dark:bg-green-900/20"
+                      : ""
+                  )}
                 >
                   {onToggleDone && (
                     <Checkbox
