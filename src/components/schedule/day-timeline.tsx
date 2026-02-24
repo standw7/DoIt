@@ -253,13 +253,14 @@ export function DayTimeline({
     }
 
     // Collect unscheduled tasks to auto-stack.
-    // Include tasks whose google_event_id doesn't match any fetched event
-    // (orphaned link — event may have been deleted or calendar not fetched).
+    // Exclude tasks already matched to calendar events AND tasks with google_event_id
+    // (those are on the calendar even if we can't find the matching event).
     const unscheduled = tasks
       .filter(
         (t) =>
           t.status === "planned" &&
-          !scheduledTaskEventIds.has(t.id)
+          !scheduledTaskEventIds.has(t.id) &&
+          !t.google_event_id
       )
       .sort((a, b) => (a.estimated_minutes ?? 30) - (b.estimated_minutes ?? 30));
 
