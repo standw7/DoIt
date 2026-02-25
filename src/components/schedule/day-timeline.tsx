@@ -78,6 +78,7 @@ interface TimeBlock {
   durationMinutes: number;
   color?: string;
   projectName?: string;
+  done?: boolean;
 }
 
 function minutesToTimeStr(totalMin: number): string {
@@ -180,6 +181,7 @@ export function DayTimeline({
           endMin: range.endMin,
           durationMinutes: range.endMin - range.startMin,
           projectName: matchedTask.project_id ? projectMap[matchedTask.project_id] : undefined,
+          done: matchedTask.status === "done",
         });
       } else {
         eventBlocks.push({
@@ -531,7 +533,8 @@ export function DayTimeline({
                       block.type === "task" && !isScheduled &&
                         "text-gray-900",
                       isDraggable && "cursor-grab",
-                      isDragging && "cursor-grabbing ring-2 ring-green-500 shadow-lg z-20"
+                      isDragging && "cursor-grabbing ring-2 ring-green-500 shadow-lg z-20",
+                      block.done && "opacity-60"
                     )}
                     style={{
                       top: `${topRem}rem`,
@@ -555,7 +558,7 @@ export function DayTimeline({
                           {isDraggable && (
                             <GripVertical className="h-3 w-3 shrink-0 opacity-40" />
                           )}
-                          <span className="font-medium truncate">{block.label}</span>
+                          <span className={cn("font-medium truncate", block.done && "line-through")}>{block.label}</span>
                           <span className="opacity-70 shrink-0">{timeStr}</span>
                         </div>
                         {block.type === "task" && onClearTask && (
@@ -576,7 +579,7 @@ export function DayTimeline({
                             <GripVertical className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
                           )}
                           <div className="min-w-0">
-                            <div className="font-medium truncate">{block.label}</div>
+                            <div className={cn("font-medium truncate", block.done && "line-through")}>{block.label}</div>
                             <div className="opacity-70">
                               {timeStr}
                               {block.projectName && (
