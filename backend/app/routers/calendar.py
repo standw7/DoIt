@@ -1,5 +1,7 @@
 """Calendar router — Google Calendar event CRUD + setup."""
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -8,6 +10,7 @@ from app.deps import get_current_user, get_db
 from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.services import google_auth, google_calendar
+from app.services.ical_service import fetch_ical_events
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
@@ -79,18 +82,33 @@ async def list_events(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List calendar events from ALL user calendars within a date range."""
+    """List calendar events from Google Calendar + iCal feeds within a date range."""
     user_settings = _get_settings(db, current_user.id)
+    all_events: list[dict] = []
 
-    if not user_settings.google_refresh_token:
-        return []
+    # Fetch Google Calendar events if connected
+    if user_settings.google_refresh_token:
+        try:
+            access_token = await _get_access_token(user_settings)
+            google_events = await google_calendar.list_all_events(
+                access_token, start, end,
+                doit_calendar_id=user_settings.doit_calendar_id,
+            )
+            all_events.extend(google_events)
+        except Exception:
+            pass
 
-    access_token = await _get_access_token(user_settings)
-    events = await google_calendar.list_all_events(
-        access_token, start, end,
-        doit_calendar_id=user_settings.doit_calendar_id,
-    )
-    return events
+    # Fetch iCal events if URLs are configured
+    if user_settings.ical_urls:
+        try:
+            urls = json.loads(user_settings.ical_urls) if isinstance(user_settings.ical_urls, str) else user_settings.ical_urls
+            if urls:
+                ical_events = await fetch_ical_events(urls, start, end)
+                all_events.extend(ical_events)
+        except Exception:
+            pass
+
+    return all_events
 
 
 @router.post("/events")

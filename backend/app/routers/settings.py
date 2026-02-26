@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -48,6 +50,9 @@ def update_settings(
         db.add(settings)
 
     updates = body.model_dump(exclude_unset=True)
+    # Serialize ical_urls list to JSON string for DB storage
+    if "ical_urls" in updates and isinstance(updates["ical_urls"], list):
+        updates["ical_urls"] = json.dumps(updates["ical_urls"])
     for key, value in updates.items():
         setattr(settings, key, value)
 

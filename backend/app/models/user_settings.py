@@ -31,6 +31,7 @@ class UserSettings(Base):
     budget_sunday: Mapped[int | None] = mapped_column(Integer, nullable=True)
     doit_calendar_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ical_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
