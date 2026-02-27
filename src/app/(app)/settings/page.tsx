@@ -30,26 +30,43 @@ function SettingsPageInner() {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
 
-    if (google === "callback" && code && !handledRef.current) {
-      handledRef.current = true;
+    if (google !== "callback" || !code || handledRef.current) return;
+    handledRef.current = true;
 
-      // Restore JWT from state param (needed when redirect lands on
-      // localhost:3003 but user logged in on tasks.homelab)
-      if (state && !localStorage.getItem("doit_token")) {
-        login(state);
-      }
-
-      handleGoogleCallback(code)
-        .then(() => {
-          toast.success("Google Calendar connected!");
-          router.replace("/settings");
-        })
-        .catch((err: any) => {
-          toast.error(err?.detail || "Failed to connect Google Calendar");
-          router.replace("/settings");
-        });
+    // Restore JWT from state param (needed when redirect lands on
+    // localhost:3003 but user logged in on tasks.homelab)
+    const token = localStorage.getItem("doit_token") || state || "";
+    if (state && !localStorage.getItem("doit_token")) {
+      localStorage.setItem("doit_token", state);
     }
-  }, [searchParams, handleGoogleCallback, router, login]);
+
+    // Exchange Google code directly — bypass React hooks to avoid race conditions
+    const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+
+    fetch("/api/backend/auth/google/callback", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ code }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Exchange failed: ${res.status}`);
+        return fetch("/api/backend/calendar/setup", { method: "POST", headers });
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Setup failed: ${res.status}`);
+        toast.success("Google Calendar connected!");
+        // Restore auth context so the app works on localhost too
+        login(token);
+      })
+      .catch((err) => {
+        toast.error("Failed to connect Google Calendar");
+        console.error("Google OAuth callback error:", err);
+      })
+      .finally(() => {
+        router.replace("/settings");
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

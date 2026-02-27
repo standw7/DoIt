@@ -8,19 +8,13 @@ import { prefetchCalendarEvents } from "@/lib/prefetch";
 import { format, addDays } from "date-fns";
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading, login } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Restore token from Google OAuth state param before auth check kicks in
-  const state = searchParams.get("state");
+  // Allow Google callback through without redirecting to login —
+  // the settings page handles token restoration and code exchange
   const isGoogleCallback = searchParams.get("google") === "callback";
-
-  useEffect(() => {
-    if (isGoogleCallback && state && !isAuthenticated && !loading) {
-      login(state);
-    }
-  }, [isGoogleCallback, state, isAuthenticated, loading, login]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated && !isGoogleCallback) {
