@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   calendarConnected: boolean;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
+  onDisconnectCalendar: () => Promise<void>;
 }
 
 export function SettingsPanel({
@@ -39,6 +40,7 @@ export function SettingsPanel({
   calendarConnected,
   onUpdate,
   onSetupCalendar,
+  onDisconnectCalendar,
 }: SettingsPanelProps) {
   const [settingUp, setSettingUp] = useState(false);
   const [localStart, setLocalStart] = useState(workingHoursStart);
@@ -254,13 +256,30 @@ export function SettingsPanel({
         <div className="space-y-2">
           <Label>Google Calendar</Label>
           {calendarConnected ? (
-            <Badge
-              variant="secondary"
-              className="flex w-fit items-center gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-            >
-              <Check className="h-3 w-3" />
-              Connected
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge
+                variant="secondary"
+                className="flex w-fit items-center gap-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              >
+                <Check className="h-3 w-3" />
+                Connected
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-destructive"
+                onClick={async () => {
+                  try {
+                    await onDisconnectCalendar();
+                    toast.success("Calendar disconnected");
+                  } catch {
+                    toast.error("Failed to disconnect calendar");
+                  }
+                }}
+              >
+                Disconnect
+              </Button>
+            </div>
           ) : (
             <div>
               <Button

@@ -61,6 +61,11 @@ export function useSettings() {
     return calendarId;
   }
 
+  async function disconnectCalendar() {
+    await api.disconnectGoogle();
+    await fetchSettings();
+  }
+
   const calendarConnected = !!settings?.doit_calendar_id;
 
   const effectiveSettings = {
@@ -86,6 +91,7 @@ export function useSettings() {
     calendarConnected,
     updateSettings,
     setupCalendar,
+    disconnectCalendar,
     handleGoogleCallback,
   };
 }

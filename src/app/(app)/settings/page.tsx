@@ -20,6 +20,7 @@ function SettingsPageInner() {
     calendarConnected,
     updateSettings,
     setupCalendar,
+    disconnectCalendar,
     handleGoogleCallback,
   } = useSettings();
 
@@ -80,6 +81,7 @@ function SettingsPageInner() {
         calendarConnected={calendarConnected}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}
+        onDisconnectCalendar={disconnectCalendar}
       />
     </div>
   );
