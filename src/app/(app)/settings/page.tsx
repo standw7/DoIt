@@ -78,7 +78,6 @@ function SettingsPageInner() {
           sunday: settings.budget_sunday,
         }}
         calendarConnected={calendarConnected}
-        icalUrls={settings.ical_urls}
         onUpdate={updateSettings}
         onSetupCalendar={setupCalendar}
       />

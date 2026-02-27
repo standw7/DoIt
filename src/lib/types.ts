@@ -69,7 +69,6 @@ export interface UserSettings {
   budget_sunday: number | null;
   doit_calendar_id: string | null;
   google_refresh_token: string | null;
-  ical_urls: string[] | null;
   created_at: string;
   updated_at: string;
 }

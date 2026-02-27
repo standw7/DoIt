@@ -1,7 +1,6 @@
-import json
 from datetime import datetime
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 
 class SettingsUpdate(BaseModel):
@@ -20,7 +19,6 @@ class SettingsUpdate(BaseModel):
     budget_sunday: int | None = None
     doit_calendar_id: str | None = None
     google_refresh_token: str | None = None
-    ical_urls: list[str] | None = None
 
 
 class SettingsResponse(BaseModel):
@@ -41,34 +39,7 @@ class SettingsResponse(BaseModel):
     budget_sunday: int | None = None
     doit_calendar_id: str | None = None
     google_refresh_token: str | None = None
-    ical_urls: list[str] | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-    @model_validator(mode="before")
-    @classmethod
-    def deserialize_ical_urls(cls, data: any) -> any:
-        """Deserialize ical_urls from JSON string (DB) to list."""
-        # Handle ORM objects
-        if hasattr(data, "ical_urls"):
-            raw = data.ical_urls
-            if isinstance(raw, str):
-                try:
-                    parsed = json.loads(raw)
-                    # Can't set on ORM object directly; convert to dict
-                    d = {c.key: getattr(data, c.key) for c in data.__table__.columns}
-                    d["ical_urls"] = parsed
-                    return d
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        # Handle dicts
-        if isinstance(data, dict):
-            raw = data.get("ical_urls")
-            if isinstance(raw, str):
-                try:
-                    data["ical_urls"] = json.loads(raw)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        return data

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Calendar, Check, Loader2, X } from "lucide-react";
+import { Settings, Calendar, Check, Loader2 } from "lucide-react";
 import { formatMinutes } from "@/lib/utils";
 import { UserSettingsUpdate } from "@/lib/types";
 import { toast } from "sonner";
@@ -24,7 +24,6 @@ interface SettingsPanelProps {
   customWeeklyBudgetsEnabled: boolean;
   weeklyBudgets: Record<DayKey, number | null>;
   calendarConnected: boolean;
-  icalUrls: string[] | null;
   onUpdate: (updates: UserSettingsUpdate) => Promise<void>;
   onSetupCalendar: () => Promise<string>;
 }
@@ -38,7 +37,6 @@ export function SettingsPanel({
   customWeeklyBudgetsEnabled,
   weeklyBudgets,
   calendarConnected,
-  icalUrls,
   onUpdate,
   onSetupCalendar,
 }: SettingsPanelProps) {
@@ -49,38 +47,6 @@ export function SettingsPanel({
   const [localWeekly, setLocalWeekly] = useState<Record<DayKey, string>>(
     Object.fromEntries(DAY_KEYS.map((d) => [d, weeklyBudgets[d] != null ? String(weeklyBudgets[d]) : ""])) as Record<DayKey, string>
   );
-  const [newIcalUrl, setNewIcalUrl] = useState("");
-
-  async function handleAddIcalUrl() {
-    const url = newIcalUrl.trim();
-    if (!url) return;
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      toast.error("URL must start with http:// or https://");
-      return;
-    }
-    const current = icalUrls ?? [];
-    if (current.includes(url)) {
-      toast.error("This URL is already added");
-      return;
-    }
-    try {
-      await onUpdate({ ical_urls: [...current, url] } as any);
-      setNewIcalUrl("");
-    } catch {
-      toast.error("Failed to add iCal URL");
-    }
-  }
-
-  async function handleRemoveIcalUrl(url: string) {
-    const current = icalUrls ?? [];
-    const filtered = current.filter((u) => u !== url);
-    try {
-      await onUpdate({ ical_urls: filtered.length > 0 ? filtered : null } as any);
-    } catch {
-      toast.error("Failed to remove iCal URL");
-    }
-  }
-
   async function commitTime(field: "working_hours_start" | "working_hours_end", value: string) {
     if (!value) return;
     try {
@@ -314,45 +280,6 @@ export function SettingsPanel({
           )}
         </div>
 
-        {/* iCal Calendar Feeds */}
-        <div className="space-y-2">
-          <Label>iCal Calendar Feeds</Label>
-          <p className="text-xs text-muted-foreground">
-            Add iCal URLs to show events from external calendars (Google, Outlook, Apple, etc.)
-          </p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="https://calendar.google.com/calendar/ical/..."
-              value={newIcalUrl}
-              onChange={(e) => setNewIcalUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddIcalUrl()}
-              className="flex-1"
-            />
-            <Button variant="outline" size="sm" onClick={handleAddIcalUrl}>
-              Add
-            </Button>
-          </div>
-          {icalUrls && icalUrls.length > 0 && (
-            <div className="space-y-1 mt-2">
-              {icalUrls.map((url) => (
-                <div
-                  key={url}
-                  className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
-                >
-                  <span className="flex-1 truncate text-muted-foreground" title={url}>
-                    {url}
-                  </span>
-                  <button
-                    onClick={() => handleRemoveIcalUrl(url)}
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

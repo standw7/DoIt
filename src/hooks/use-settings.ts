@@ -19,7 +19,6 @@ const DEFAULT_SETTINGS = {
   budget_saturday: null as number | null,
   budget_sunday: null as number | null,
   doit_calendar_id: null as string | null,
-  ical_urls: null as string[] | null,
 };
 
 export function useSettings() {
@@ -79,7 +78,6 @@ export function useSettings() {
     budget_saturday: settings?.budget_saturday ?? null,
     budget_sunday: settings?.budget_sunday ?? null,
     doit_calendar_id: settings?.doit_calendar_id ?? null,
-    ical_urls: settings?.ical_urls ?? null,
   };
 
   return {
