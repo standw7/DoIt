@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, FolderKanban, Clock, CheckSquare, LogOut, ListTodo, Settings, CircleHelp } from "lucide-react";
+import { CalendarDays, FolderKanban, Clock, CheckSquare, LogOut, ListTodo, Settings, CircleHelp, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 const links = [
   { href: "/schedule", label: "Schedule", icon: Clock },
   { href: "/today", label: "Today", icon: CalendarDays },
+  { href: "/overdue", label: "Overdue", icon: AlertTriangle },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/settings", label: "Settings", icon: Settings },

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FolderKanban, Clock, ListTodo } from "lucide-react";
+import { CalendarDays, FolderKanban, Clock, ListTodo, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/schedule", label: "Schedule", icon: Clock },
   { href: "/today", label: "Today", icon: CalendarDays },
+  { href: "/overdue", label: "Overdue", icon: AlertTriangle },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
 ];
