@@ -314,8 +314,8 @@ export default function SchedulePage() {
 
   async function handleOverdueUpdate(id: string, updates: Record<string, any>) {
     await updateTask(id, updates);
+    await fetchAllTasks();
     await refetchDayTasks();
-    await handleRebalance();
   }
 
   return (

@@ -70,7 +70,6 @@ export function OverdueReview({
 
       setDismissed((prev) => new Set(prev).add(task.id));
       toast.success(`"${task.name}" rescheduled to ${bestDay}`);
-      await onRefresh();
     } catch {
       toast.error("Failed to reschedule task");
     } finally {
@@ -83,7 +82,6 @@ export function OverdueReview({
     try {
       await onUpdateTask(task.id, { status: "done" });
       setDismissed((prev) => new Set(prev).add(task.id));
-      await onRefresh();
     } catch {
       toast.error("Failed to update task");
     } finally {
@@ -96,7 +94,6 @@ export function OverdueReview({
     try {
       await onUpdateTask(task.id, { status: "skipped" });
       setDismissed((prev) => new Set(prev).add(task.id));
-      await onRefresh();
     } catch {
       toast.error("Failed to update task");
     } finally {
