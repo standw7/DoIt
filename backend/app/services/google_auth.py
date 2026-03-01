@@ -1,8 +1,13 @@
 """Google OAuth2 helpers — token exchange and refresh."""
 
+import logging
+from urllib.parse import urlencode
+
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -21,8 +26,7 @@ def get_authorization_url(state: str | None = None) -> str:
     }
     if state:
         params["state"] = state
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    return f"{GOOGLE_AUTH_URL}?{qs}"
+    return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 
 async def exchange_code(code: str) -> dict:
@@ -41,8 +45,12 @@ async def exchange_code(code: str) -> dict:
                 "redirect_uri": settings.GOOGLE_REDIRECT_URI,
             },
         )
+        if resp.status_code != 200:
+            logger.error("Google token exchange failed: %s %s", resp.status_code, resp.text)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        logger.info("Google token exchange succeeded, keys: %s", list(data.keys()))
+        return data
 
 
 async def refresh_access_token(refresh_token: str) -> str:

@@ -66,6 +66,27 @@ def update_recurring_task(
     for key, value in updates.items():
         setattr(rt, key, value)
 
+    # Propagate available_days_before changes to existing planned task instances
+    if "available_days_before" in updates:
+        planned_instances = (
+            db.query(Task)
+            .filter(
+                Task.recurring_task_id == rt_id,
+                Task.user_id == current_user.id,
+                Task.status.in_(["planned", "backlog"]),
+            )
+            .all()
+        )
+        for task in planned_instances:
+            if task.due_date and rt.available_days_before is not None:
+                af = date.fromisoformat(task.due_date) - timedelta(days=rt.available_days_before)
+                task.available_from = af.isoformat()
+                # Reset day if it now violates the constraint
+                if task.day and task.day < task.available_from:
+                    task.day = task.due_date
+            else:
+                task.available_from = None
+
     db.commit()
     db.refresh(rt)
     return rt

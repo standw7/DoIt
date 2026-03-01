@@ -115,10 +115,10 @@ async def exchange_google_code(
     """Exchange a Google authorization code for tokens and store refresh token."""
     try:
         tokens = await google_auth.exchange_code(body.code)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to exchange authorization code with Google.",
+            detail=f"Failed to exchange authorization code with Google: {exc}",
         )
 
     refresh_token = tokens.get("refresh_token")
