@@ -66,7 +66,7 @@ export function RecurringTasksSection({
           </div>
           {isOpen && (
             <p className="text-xs text-muted-foreground">
-              Tasks that automatically repeat on a weekly schedule
+              Tasks that automatically repeat on a schedule
             </p>
           )}
         </CardHeader>
@@ -93,7 +93,11 @@ export function RecurringTasksSection({
                           {task.name}
                         </span>
                         <Badge variant="outline" className="text-xs shrink-0">
-                          {DAY_NAMES[task.recurrence_day]}s
+                          {task.recurrence_type === "monthly"
+                            ? `${task.recurrence_day}${task.recurrence_day === 1 ? "st" : task.recurrence_day === 2 ? "nd" : task.recurrence_day === 3 ? "rd" : "th"} of month`
+                            : task.recurrence_type === "biweekly"
+                              ? `Every other ${DAY_NAMES[task.recurrence_day]?.slice(0, 3)}`
+                              : `${DAY_NAMES[task.recurrence_day]}s`}
                         </Badge>
                         <Badge variant="secondary" className="text-xs shrink-0">
                           {formatMinutes(task.estimated_minutes)}

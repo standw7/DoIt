@@ -9,7 +9,8 @@ class RecurringTaskCreate(BaseModel):
     estimated_minutes: int = 30
     priority: str = "medium"
     project_id: str | None = None
-    recurrence_day: int  # 0=Sunday ... 6=Saturday
+    recurrence_day: int  # weekly/biweekly: 0=Sunday...6=Saturday; monthly: 1-31
+    recurrence_type: str = "weekly"  # weekly, biweekly, monthly
     available_days_before: int | None = None
     start_date: str
     end_date: str | None = None
@@ -24,6 +25,7 @@ class RecurringTaskUpdate(BaseModel):
     priority: str | None = None
     project_id: str | None = None
     recurrence_day: int | None = None
+    recurrence_type: str | None = None
     available_days_before: int | None = None
     start_date: str | None = None
     end_date: str | None = None
@@ -40,6 +42,7 @@ class RecurringTaskResponse(BaseModel):
     priority: str
     project_id: str | None = None
     recurrence_day: int
+    recurrence_type: str
     available_days_before: int | None = None
     start_date: str
     end_date: str | None = None

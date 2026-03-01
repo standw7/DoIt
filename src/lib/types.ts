@@ -97,6 +97,8 @@ export interface DailyBudgetOverride {
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
+export type RecurrenceType = "weekly" | "biweekly" | "monthly";
+
 export interface RecurringTask {
   id: string;
   user_id: string;
@@ -105,7 +107,8 @@ export interface RecurringTask {
   estimated_minutes: number;
   priority: TaskPriority;
   project_id: string | null;
-  recurrence_day: number; // 0=Sunday ... 6=Saturday
+  recurrence_day: number; // weekly/biweekly: 0=Sunday...6=Saturday; monthly: 1-31
+  recurrence_type: RecurrenceType;
   available_days_before: number | null; // restrict assignment to N days before due
   start_date: string;
   end_date: string | null;

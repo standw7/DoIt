@@ -136,7 +136,9 @@ export function scoreDays(input: SchedulerInput): DayScore[] {
   if (task.due_date) {
     endDate = parseISO(task.due_date);
     if (format(endDate, "yyyy-MM-dd") <= todayStr) {
-      endDate = today;
+      // Due date is past or today — expand to 14-day window so the task
+      // can actually be placed on a day with capacity
+      endDate = addDays(today, 14);
     }
   } else {
     endDate = addDays(today, 14);
@@ -271,8 +273,11 @@ export function pickBestDayWithInfo(input: SchedulerInput): PickResult {
     return { date: scores[0].date, overBudget: true };
   }
 
-  // No day has physical capacity — fall back to due date or today
-  const fallback = input.task.due_date ?? format(new Date(), "yyyy-MM-dd");
+  // No day has physical capacity — fall back to today (never a past date)
+  const todayFallback = format(new Date(), "yyyy-MM-dd");
+  const fallback = input.task.due_date && input.task.due_date >= todayFallback
+    ? input.task.due_date
+    : todayFallback;
   return { date: fallback, overBudget: true };
 }
 

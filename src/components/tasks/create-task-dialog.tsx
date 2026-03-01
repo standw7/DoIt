@@ -105,6 +105,7 @@ export function CreateTaskDialog({
           priority,
           project_id: effectiveProjectId,
           recurrence_day: recurrenceDay,
+          recurrence_type: "weekly",
           available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
-import { RecurringTask, RecurringTaskInsert, RecurringTaskUpdate, TaskPriority, DAY_NAMES } from "@/lib/types";
+import { RecurringTask, RecurringTaskInsert, RecurringTaskUpdate, RecurrenceType, TaskPriority, DAY_NAMES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -45,7 +45,9 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(30);
   const [customMinutes, setCustomMinutes] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>("weekly");
   const [recurrenceDay, setRecurrenceDay] = useState<number>(0);
+  const [monthDay, setMonthDay] = useState<number>(1);
   const [availableDaysBefore, setAvailableDaysBefore] = useState<string>("");
   const [endDate, setEndDate] = useState("");
   const [preferWeekend, setPreferWeekend] = useState(false);
@@ -56,7 +58,9 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
     setEstimatedMinutes(30);
     setCustomMinutes("");
     setPriority("medium");
+    setRecurrenceType("weekly");
     setRecurrenceDay(0);
+    setMonthDay(1);
     setAvailableDaysBefore("");
     setEndDate("");
     setPreferWeekend(false);
@@ -76,7 +80,14 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
         setCustomMinutes(String(editingTask.estimated_minutes));
       }
       setPriority(editingTask.priority);
-      setRecurrenceDay(editingTask.recurrence_day);
+      setRecurrenceType(editingTask.recurrence_type ?? "weekly");
+      if (editingTask.recurrence_type === "monthly") {
+        setMonthDay(editingTask.recurrence_day);
+        setRecurrenceDay(0);
+      } else {
+        setRecurrenceDay(editingTask.recurrence_day);
+        setMonthDay(1);
+      }
       setAvailableDaysBefore(editingTask.available_days_before != null ? String(editingTask.available_days_before) : "");
       setEndDate(editingTask.end_date ?? "");
       setPreferWeekend(editingTask.prefer_weekend);
@@ -90,6 +101,8 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
     const minutes = customMinutes ? parseInt(customMinutes) : estimatedMinutes;
     if (!name.trim() || !minutes) return;
 
+    const effectiveDay = recurrenceType === "monthly" ? monthDay : recurrenceDay;
+
     try {
       if (isEditMode && onUpdate && editingTask) {
         await onUpdate(editingTask.id, {
@@ -98,7 +111,8 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
           estimated_minutes: minutes,
           priority,
           project_id: editingTask.project_id,
-          recurrence_day: recurrenceDay,
+          recurrence_day: effectiveDay,
+          recurrence_type: recurrenceType,
           available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: editingTask.start_date,
           end_date: endDate || null,
@@ -108,13 +122,19 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
         setDialogOpen(false);
         toast.success("Recurring task updated");
       } else if (onCreate) {
+        const freqLabel = recurrenceType === "monthly"
+          ? `monthly on the ${monthDay}${monthDay === 1 ? "st" : monthDay === 2 ? "nd" : monthDay === 3 ? "rd" : "th"}`
+          : recurrenceType === "biweekly"
+            ? `every other ${DAY_NAMES[recurrenceDay]}`
+            : `every ${DAY_NAMES[recurrenceDay]}`;
         await onCreate({
           name: name.trim(),
           description: description.trim() || null,
           estimated_minutes: minutes,
           priority,
           project_id: null,
-          recurrence_day: recurrenceDay,
+          recurrence_day: effectiveDay,
+          recurrence_type: recurrenceType,
           available_days_before: availableDaysBefore ? parseInt(availableDaysBefore) : null,
           start_date: format(new Date(), "yyyy-MM-dd"),
           end_date: endDate || null,
@@ -123,7 +143,7 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
         });
         reset();
         setDialogOpen(false);
-        toast.success(`Recurring task created — every ${DAY_NAMES[recurrenceDay]}`);
+        toast.success(`Recurring task created — ${freqLabel}`);
       }
     } catch {
       toast.error(isEditMode ? "Failed to update recurring task" : "Failed to create recurring task");
@@ -151,22 +171,56 @@ export function RecurringTaskDialog({ onCreate, onUpdate, editingTask, open: con
         </div>
 
         <div>
-          <Label>Repeats every *</Label>
-          <div className="flex gap-1.5 flex-wrap mt-1">
-            {DAY_NAMES.map((day, i) => (
+          <Label>Frequency *</Label>
+          <div className="flex gap-2 mt-1">
+            {(["weekly", "biweekly", "monthly"] as RecurrenceType[]).map((type) => (
               <Button
-                key={i}
+                key={type}
                 type="button"
-                variant={recurrenceDay === i ? "default" : "outline"}
+                variant={recurrenceType === type ? "default" : "outline"}
                 size="sm"
-                onClick={() => setRecurrenceDay(i)}
-                className="px-2.5"
+                onClick={() => setRecurrenceType(type)}
               >
-                {day.slice(0, 3)}
+                {type === "biweekly" ? "Biweekly" : type.charAt(0).toUpperCase() + type.slice(1)}
               </Button>
             ))}
           </div>
         </div>
+
+        {recurrenceType === "monthly" ? (
+          <div>
+            <Label>Day of month *</Label>
+            <Input
+              type="number"
+              value={monthDay}
+              onChange={(e) => setMonthDay(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+              min={1}
+              max={31}
+              className="w-24 mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              If the month has fewer days, the last day is used
+            </p>
+          </div>
+        ) : (
+          <div>
+            <Label>Repeats {recurrenceType === "biweekly" ? "every other" : "every"} *</Label>
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {DAY_NAMES.map((day, i) => (
+                <Button
+                  key={i}
+                  type="button"
+                  variant={recurrenceDay === i ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setRecurrenceDay(i)}
+                  className="px-2.5"
+                >
+                  {day.slice(0, 3)}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <Label>Available days before due (optional)</Label>

@@ -44,6 +44,10 @@ def _run_migrations():
                 conn.execute(text(
                     "ALTER TABLE recurring_tasks ADD COLUMN prefer_weekend BOOLEAN DEFAULT 0 NOT NULL"
                 ))
+            if "recurrence_type" not in columns:
+                conn.execute(text(
+                    "ALTER TABLE recurring_tasks ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'weekly' NOT NULL"
+                ))
 
 
 @asynccontextmanager

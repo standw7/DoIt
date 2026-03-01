@@ -21,7 +21,8 @@ class RecurringTask(Base):
     estimated_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     project_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    recurrence_day: Mapped[int] = mapped_column(Integer, nullable=False)  # 0=Sunday ... 6=Saturday
+    recurrence_day: Mapped[int] = mapped_column(Integer, nullable=False)  # weekly/biweekly: 0=Sunday...6=Saturday; monthly: 1-31 day of month
+    recurrence_type: Mapped[str] = mapped_column(String(20), nullable=False, default="weekly")  # weekly, biweekly, monthly
     available_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
     start_date: Mapped[str] = mapped_column(String(10), nullable=False)
     end_date: Mapped[str | None] = mapped_column(String(10), nullable=True)

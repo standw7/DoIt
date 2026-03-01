@@ -1,3 +1,4 @@
+import calendar
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -114,57 +115,101 @@ def generate_recurring_instances(
     for template in templates:
         start = date.fromisoformat(template.start_date)
         end = date.fromisoformat(template.end_date) if template.end_date else None
+        recurrence_type = getattr(template, "recurrence_type", "weekly") or "weekly"
 
-        # Find first occurrence from today (or start_date if future)
-        cursor = max(start, today)
+        dates_to_create: list[date] = []
 
-        # Advance to the next target weekday
-        target_day = template.recurrence_day  # 0=Sunday ... 6=Saturday
-        # Python weekday: 0=Monday ... 6=Sunday — convert
-        python_target = (target_day - 1) % 7  # Sun(0)->6, Mon(1)->0, ...
+        if recurrence_type == "monthly":
+            # Monthly: recurrence_day = day of month (1-31)
+            target_month_day = template.recurrence_day
 
-        while cursor.weekday() != python_target:
-            cursor += timedelta(days=1)
+            # Start from the month of today (or start_date if future)
+            cursor_date = max(start, today)
+            cursor_year = cursor_date.year
+            cursor_month = cursor_date.month
 
-        while cursor <= horizon:
-            if end and cursor > end:
-                break
-            if cursor >= start:
-                date_str = cursor.isoformat()
+            while True:
+                # Clamp to last day of month if needed (e.g., 31st in Feb → 28/29)
+                last_day = calendar.monthrange(cursor_year, cursor_month)[1]
+                actual_day = min(target_month_day, last_day)
+                candidate = date(cursor_year, cursor_month, actual_day)
 
-                # Check if instance already exists
-                already_exists = any(
-                    t.recurring_task_id == template.id and t.due_date == date_str
-                    for t in existing_tasks
+                if candidate > horizon:
+                    break
+                if end and candidate > end:
+                    break
+                if candidate >= today and candidate >= start:
+                    dates_to_create.append(candidate)
+
+                # Advance to next month
+                if cursor_month == 12:
+                    cursor_year += 1
+                    cursor_month = 1
+                else:
+                    cursor_month += 1
+        else:
+            # Weekly or biweekly
+            target_day = template.recurrence_day  # 0=Sunday ... 6=Saturday
+            python_target = (target_day - 1) % 7  # Sun(0)->6, Mon(1)->0, ...
+
+            if recurrence_type == "biweekly":
+                # Anchor to start_date to maintain correct 2-week cadence
+                cursor = start
+                while cursor.weekday() != python_target:
+                    cursor += timedelta(days=1)
+                # Generate from the first occurrence, skip past dates
+                while cursor <= horizon:
+                    if end and cursor > end:
+                        break
+                    if cursor >= today and cursor >= start:
+                        dates_to_create.append(cursor)
+                    cursor += timedelta(weeks=2)
+            else:
+                # Weekly (default)
+                cursor = max(start, today)
+                while cursor.weekday() != python_target:
+                    cursor += timedelta(days=1)
+                while cursor <= horizon:
+                    if end and cursor > end:
+                        break
+                    if cursor >= start:
+                        dates_to_create.append(cursor)
+                    cursor += timedelta(weeks=1)
+
+        # Create task instances for each date
+        for occurrence in dates_to_create:
+            date_str = occurrence.isoformat()
+
+            already_exists = any(
+                t.recurring_task_id == template.id and t.due_date == date_str
+                for t in existing_tasks
+            )
+
+            if not already_exists:
+                available_from = None
+                if template.available_days_before is not None:
+                    af = occurrence - timedelta(days=template.available_days_before)
+                    available_from = af.isoformat()
+
+                task = Task(
+                    user_id=current_user.id,
+                    name=template.name,
+                    description=template.description,
+                    estimated_minutes=template.estimated_minutes,
+                    priority=template.priority,
+                    project_id=template.project_id,
+                    due_date=date_str,
+                    day=date_str,
+                    status="planned",
+                    sort_order=0,
+                    split_allowed=False,
+                    auto_assigned=True,
+                    recurring_task_id=template.id,
+                    available_from=available_from,
+                    prefer_weekend=template.prefer_weekend,
                 )
-
-                if not already_exists:
-                    available_from = None
-                    if template.available_days_before is not None:
-                        af = cursor - timedelta(days=template.available_days_before)
-                        available_from = af.isoformat()
-
-                    task = Task(
-                        user_id=current_user.id,
-                        name=template.name,
-                        description=template.description,
-                        estimated_minutes=template.estimated_minutes,
-                        priority=template.priority,
-                        project_id=template.project_id,
-                        due_date=date_str,
-                        day=date_str,
-                        status="planned",
-                        sort_order=0,
-                        split_allowed=False,
-                        auto_assigned=True,
-                        recurring_task_id=template.id,
-                        available_from=available_from,
-                        prefer_weekend=template.prefer_weekend,
-                    )
-                    db.add(task)
-                    created_tasks.append(task)
-
-            cursor += timedelta(weeks=1)
+                db.add(task)
+                created_tasks.append(task)
 
     if created_tasks:
         db.commit()
