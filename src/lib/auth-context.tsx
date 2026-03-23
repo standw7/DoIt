@@ -21,25 +21,16 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = "doit_token";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     try {
       const userData = await api.getCurrentUser();
       setUser(userData);
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
       setUser(null);
     } finally {
       setLoading(false);
@@ -50,13 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  const login = useCallback(async (token: string) => {
-    localStorage.setItem(TOKEN_KEY, token);
+  const login = useCallback(async (_token: string) => {
     await fetchUser();
   }, [fetchUser]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);
 
